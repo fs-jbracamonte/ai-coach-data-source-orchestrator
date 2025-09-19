@@ -15,7 +15,7 @@
   },
   "query": {
     "client_project_id": 1,
-    "employee_id": 1,
+    "employee_id": "",
     "report_date_start": "2025-01-01",
     "report_date_end": "2025-01-31"
   }

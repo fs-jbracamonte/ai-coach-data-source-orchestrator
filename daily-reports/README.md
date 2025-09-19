@@ -40,8 +40,8 @@ This will install all dependencies including `mysql2` and `ssh2` needed for data
      **Note**: The database host should be "localhost" because you're connecting through the SSH tunnel, not directly to the remote database server.
    
    - **Query Parameters:**
-     - `client_project_id`: The client project ID to filter reports
-     - `employee_id`: The employee ID to filter reports
+     - `client_project_id`: The client project ID to filter reports (required)
+     - `employee_id`: The employee ID to filter reports (optional - leave empty to query all employees)
      - `report_date_start`: Start date for the report range (YYYY-MM-DD format)
      - `report_date_end`: End date for the report range (YYYY-MM-DD format)
 
@@ -110,24 +110,49 @@ This will:
    - Client project information
 3. Filter results based on the parameters in `config.json`:
    - Specific client project
-   - Specific employee
+   - Specific employee (or all employees if left empty)
    - Date range
-4. Export results to CSV file using the employee's name from the query results:
-   - Example: `data/daily-reports-John-Doe-2025-08-01-to-2025-08-31.csv`
+4. Export results to CSV file(s):
+   - **Single employee**: `data/daily-reports-John-Doe-2025-08-01-to-2025-08-31.csv`
+   - **All employees**: Separate CSV files for each employee with the same naming format
+
+#### Query Examples:
+
+**Single Employee Query Output:**
+```
+Query returned 22 rows
+✓ Results saved to: daily-reports/data/daily-reports-John-Doe-2025-08-01-to-2025-08-31.csv
+```
+
+**All Employees Query Output:**
+```
+Query returned 156 rows
+
+Processing reports for 5 employees...
+  - John Doe: 22 entries
+  - Jane Smith: 31 entries
+  - Bob Johnson: 28 entries
+  - Alice Brown: 40 entries
+  - Mike Davis: 35 entries
+
+✓ Created 5 CSV files
+```
 
 ### Converting CSV to Markdown
 
-After running the query, you can convert the CSV results to a formatted Markdown file:
+After running the query, you can convert the CSV results to formatted Markdown files:
 
 ```bash
 npm run daily:convert
 ```
 
 This will:
-1. Find the most recent CSV file in the `data/` directory
-2. Convert it to a beautifully formatted Markdown document
-3. Save the result in the `md-output/` directory
-4. Preserve the same filename but with `.md` extension
+1. Find all CSV files in the `data/` directory
+2. Convert each one to a beautifully formatted Markdown document
+3. Save the results in the `md-output/` directory
+4. Preserve the same filenames but with `.md` extension
+
+**Note**: If you queried all employees, this will convert all individual employee CSV files to separate Markdown files.
 
 The Markdown output includes:
 - Employee and project information header
@@ -148,16 +173,35 @@ This combines both steps automatically:
 1. Queries the database and saves to CSV
 2. Converts the CSV to formatted Markdown
 
+### Cleaning Output Directories
+
+To remove all generated CSV and Markdown files:
+
+```bash
+npm run daily:clean
+```
+
+This will delete all `.csv` files from `data/` and all `.md` files from `md-output/` while preserving the directories and `.gitkeep` files.
+
 ### Modifying Query Parameters
 
 To change which reports are retrieved, update the `query` section in `config.json`:
 
 ```json
+// Query specific employee
 "query": {
-  "client_project_id": 522,      // Change to different project ID
-  "employee_id": 42,              // Change to different employee ID
-  "report_date_start": "2025-08-01",  // Change start date
-  "report_date_end": "2025-08-31"     // Change end date
+  "client_project_id": 522,
+  "employee_id": 42,
+  "report_date_start": "2025-08-01",
+  "report_date_end": "2025-08-31"
+}
+
+// Query all employees in project
+"query": {
+  "client_project_id": 522,
+  "employee_id": "",               // Leave empty for all employees
+  "report_date_start": "2025-08-01",
+  "report_date_end": "2025-08-31"
 }
 ```
 

@@ -13,7 +13,8 @@
     "transcripts:test-convert": "node transcripts/test-transcript-conversion.js",
     "daily:query": "node daily-reports/db-query.js",
     "daily:convert": "node daily-reports/csv-to-markdown.js",
-    "daily:all": "node daily-reports/run-all.js"
+    "daily:all": "node daily-reports/run-all.js",
+    "daily:clean": "node daily-reports/clean.js"
   },
   "author": "",
   "license": "ISC",

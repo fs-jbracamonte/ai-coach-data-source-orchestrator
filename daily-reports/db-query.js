@@ -189,6 +189,8 @@ async function main() {
     await db.connect();
     
     // Build the employee reports query using config parameters
+    const hasEmployeeId = config.query.employee_id && config.query.employee_id !== '';
+    
     const query = `
       SELECT 
           e.id AS employee_id, 
@@ -212,9 +214,9 @@ async function main() {
           client_project_id = ?
           AND er.report_template_id = ?
           AND er.report_date BETWEEN ? AND ?
-          AND employee_id = ?
+          ${hasEmployeeId ? 'AND employee_id = ?' : ''}
       ORDER BY 
-          er.report_date DESC
+          er.employee_id, er.report_date DESC
     `;
     
     // Get parameters from config
@@ -222,13 +224,17 @@ async function main() {
       config.query.client_project_id,
       1,  // report_template_id is always 1
       config.query.report_date_start,
-      config.query.report_date_end,
-      config.query.employee_id
+      config.query.report_date_end
     ];
+    
+    // Only add employee_id to params if it exists
+    if (hasEmployeeId) {
+      params.push(config.query.employee_id);
+    }
     
     console.log('\nQuery Parameters:');
     console.log(`  Client Project ID: ${config.query.client_project_id}`);
-    console.log(`  Employee ID: ${config.query.employee_id}`);
+    console.log(`  Employee ID: ${hasEmployeeId ? config.query.employee_id : 'ALL EMPLOYEES'}`);
     console.log(`  Date Range: ${config.query.report_date_start} to ${config.query.report_date_end}`);
     console.log(`  Report Template ID: 1 (fixed)`);
     
@@ -238,15 +244,44 @@ async function main() {
     console.log(`\nQuery returned ${results.length} rows`);
     
     if (results.length > 0) {
-      // Get employee name from first row of results
-      const firstName = results[0].employee_first_name;
-      const lastName = results[0].employee_last_name;
-      
-      // Generate filename with employee name and date range
-      const filename = `daily-reports-${firstName}-${lastName}-${config.query.report_date_start}-to-${config.query.report_date_end}.csv`;
-      
-      // Save all results to CSV
-      await saveResultsAsCSV(results, filename);
+      if (hasEmployeeId) {
+        // Single employee - save as before
+        const firstName = results[0].employee_first_name;
+        const lastName = results[0].employee_last_name;
+        
+        // Generate filename with employee name and date range
+        const filename = `daily-reports-${firstName}-${lastName}-${config.query.report_date_start}-to-${config.query.report_date_end}.csv`;
+        
+        // Save all results to CSV
+        await saveResultsAsCSV(results, filename);
+      } else {
+        // Multiple employees - group by employee_id and save separately
+        const employeeGroups = {};
+        
+        // Group results by employee_id
+        for (const row of results) {
+          const empId = row.employee_id;
+          if (!employeeGroups[empId]) {
+            employeeGroups[empId] = {
+              firstName: row.employee_first_name,
+              lastName: row.employee_last_name,
+              rows: []
+            };
+          }
+          employeeGroups[empId].rows.push(row);
+        }
+        
+        console.log(`\nProcessing reports for ${Object.keys(employeeGroups).length} employees...`);
+        
+        // Save each employee's data to a separate CSV
+        for (const [empId, empData] of Object.entries(employeeGroups)) {
+          const filename = `daily-reports-${empData.firstName}-${empData.lastName}-${config.query.report_date_start}-to-${config.query.report_date_end}.csv`;
+          await saveResultsAsCSV(empData.rows, filename);
+          console.log(`  - ${empData.firstName} ${empData.lastName}: ${empData.rows.length} entries`);
+        }
+        
+        console.log(`\n✓ Created ${Object.keys(employeeGroups).length} CSV files`);
+      }
     } else {
       console.log('No results found for the specified criteria');
     }

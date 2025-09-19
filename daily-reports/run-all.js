@@ -35,11 +35,14 @@ async function main() {
     console.log('\n' + '='.repeat(50) + '\n');
     
     // Step 2: Convert CSV to Markdown
-    console.log('Step 2: Converting CSV to Markdown...\n');
+    console.log('Step 2: Converting CSV files to Markdown...\n');
     await runCommand('npm', ['run', 'daily:convert']);
     
     console.log('\n' + '='.repeat(50) + '\n');
     console.log('✓ All tasks completed successfully!');
+    console.log('\nCheck the following directories:');
+    console.log('  - CSV files: daily-reports/data/');
+    console.log('  - Markdown files: daily-reports/md-output/');
     
   } catch (error) {
     console.error('\n✗ Error:', error.message);

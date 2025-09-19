@@ -310,29 +310,41 @@ async function main() {
     process.exit(1);
   }
 
-  // Process the most recent CSV file
-  const csvFile = csvFiles.sort().reverse()[0];
-  const csvPath = path.join(dataDir, csvFile);
+  // Process all CSV files
+  console.log(`Found ${csvFiles.length} CSV file(s) to process\n`);
   
-  console.log(`Processing: ${csvFile}`);
+  let successCount = 0;
+  let errorCount = 0;
   
-  try {
-    const markdown = await converter.convertCsvToMarkdown(csvPath);
+  for (const csvFile of csvFiles.sort()) {
+    const csvPath = path.join(dataDir, csvFile);
     
-    // Generate output filename based on input
-    const baseName = path.basename(csvFile, '.csv');
-    const outputFileName = `${baseName}.md`;
-    const outputPath = path.join(converter.outputDir, outputFileName);
+    console.log(`Processing: ${csvFile}`);
     
-    // Write markdown file
-    fs.writeFileSync(outputPath, markdown);
-    
-    console.log(`✓ Markdown file created: ${outputPath}`);
-    console.log(`  File size: ${fs.statSync(outputPath).size} bytes`);
-    
-  } catch (error) {
-    console.error('Error converting CSV to Markdown:', error.message);
-    process.exit(1);
+    try {
+      const markdown = await converter.convertCsvToMarkdown(csvPath);
+      
+      // Generate output filename based on input
+      const baseName = path.basename(csvFile, '.csv');
+      const outputFileName = `${baseName}.md`;
+      const outputPath = path.join(converter.outputDir, outputFileName);
+      
+      // Write markdown file
+      fs.writeFileSync(outputPath, markdown);
+      
+      console.log(`  ✓ Created: ${outputFileName} (${fs.statSync(outputPath).size} bytes)`);
+      successCount++;
+      
+    } catch (error) {
+      console.error(`  ✗ Error: ${error.message}`);
+      errorCount++;
+    }
+  }
+  
+  console.log(`\nConversion complete:`);
+  console.log(`  ✓ Success: ${successCount} file(s)`);
+  if (errorCount > 0) {
+    console.log(`  ✗ Failed: ${errorCount} file(s)`);
   }
 }
 

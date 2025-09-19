@@ -1,0 +1,96 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment and config files with sensitive data
+.env
+.env.local
+.env.*.local
+config.json
+!config.example.json
+service-account-key.json
+credentials.json
+token.json
+
+# SSH keys and certificates
+*.pem
+*.key
+*.crt
+*.cer
+ssh-keys/
+
+# Data and output directories (ignore contents but keep directories with .gitkeep)
+daily-reports/data/*
+!daily-reports/data/.gitkeep
+daily-reports/md-output/*
+!daily-reports/md-output/.gitkeep
+
+jira/data/*
+!jira/data/.gitkeep
+jira/md_output/*
+!jira/md_output/.gitkeep
+
+transcripts/downloads/*
+!transcripts/downloads/.gitkeep
+transcripts/markdown-output/*
+!transcripts/markdown-output/.gitkeep
+
+# Other data directories (completely ignored)
+output/
+outputs/
+results/
+
+# Specific data files
+*.csv
+!*.example.csv
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Build outputs
+dist/
+build/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Archive files
+*.zip
+*.tar
+*.gz
+*.7z
+*.rar
+
+# Office temp files
+~$*
+*.~*
+
+# Python cache (if any Python scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Keep .gitkeep files
+!**/.gitkeep

@@ -1,0 +1,28 @@
+{
+  "name": "data-source-orchestrator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "jira:export": "node jira/export-to-csv.js",
+    "jira:split": "node jira/split-by-assignee.js",
+    "jira:markdown": "node jira/csv-to-markdown.js",
+    "jira:all": "node jira/run-all.js",
+    "transcripts:download": "node transcripts/download-from-drive.js",
+    "transcripts:test-convert": "node transcripts/test-transcript-conversion.js",
+    "daily:query": "node daily-reports/db-query.js",
+    "daily:convert": "node daily-reports/csv-to-markdown.js",
+    "daily:all": "node daily-reports/run-all.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "csv-parser": "^3.2.0",
+    "csv-writer": "^1.6.0",
+    "dotenv": "^17.2.2",
+    "googleapis": "^160.0.0",
+    "mysql2": "^3.11.0",
+    "ssh2": "^1.15.0"
+  }
+}

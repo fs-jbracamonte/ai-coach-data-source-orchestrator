@@ -1,0 +1,18 @@
+# Service Account Key - NEVER commit this!
+service-account-key.json
+
+# Downloaded files
+downloads/
+
+# Converted markdown files
+markdown-output/
+
+# Test files
+test-files/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Note: config.json is tracked to share folder ID and settings
+# but make sure not to include sensitive data in it

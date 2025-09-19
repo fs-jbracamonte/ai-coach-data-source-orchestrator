@@ -1,0 +1,23 @@
+# Configuration file with sensitive data
+config.json
+
+# SSH keys directory
+ssh-keys/
+
+# PEM files
+*.pem
+
+# These are now handled by the main .gitignore
+# The data/ and md-output/ directories are preserved with .gitkeep files
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db

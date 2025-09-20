@@ -4,16 +4,16 @@ const path = require('path');
 const transcriptToMarkdown = require('./transcript-to-markdown');
 
 // Load configuration
-const config = require('./config.json');
+const config = require('../config.json');
 
 // Configuration from config.json
-const FOLDER_ID = config.folderId;
-const SERVICE_ACCOUNT_KEY_FILE = config.serviceAccountKeyFile;
-const DOWNLOAD_DIR = config.downloadDir;
-const FILE_PREFIX = config.filePrefix || '';
-const SANITIZE_FILENAMES = config.sanitizeFilenames !== false;
-const CONVERT_TO_MARKDOWN = config.convertToMarkdown || false;
-const MARKDOWN_OUTPUT_DIR = config.markdownOutputDir || './markdown-output';
+const FOLDER_ID = config.transcripts.folderId;
+const SERVICE_ACCOUNT_KEY_FILE = config.transcripts.serviceAccountKeyFile;
+const DOWNLOAD_DIR = config.transcripts.downloadDir;
+const FILE_PREFIX = config.transcripts.filePrefix || '';
+const SANITIZE_FILENAMES = config.transcripts.sanitizeFilenames !== false;
+const CONVERT_TO_MARKDOWN = config.transcripts.convertToMarkdown || false;
+const MARKDOWN_OUTPUT_DIR = config.transcripts.markdownOutputDir || './markdown-output';
 
 // Sanitize filename for Windows/cross-platform compatibility
 function sanitizeFilename(filename) {
@@ -90,7 +90,7 @@ async function initializeDrive() {
   try {
     // Load service account credentials
     const auth = new google.auth.GoogleAuth({
-      keyFile: path.join(__dirname, SERVICE_ACCOUNT_KEY_FILE),
+      keyFile: path.resolve(SERVICE_ACCOUNT_KEY_FILE),
       scopes: ['https://www.googleapis.com/auth/drive.readonly'],
     });
 
@@ -166,8 +166,8 @@ async function downloadFilesWithPrefix(drive, folderId, prefix = '') {
     }
     
     // Filter by date range if enabled
-    if (config.dateFilter && config.dateFilter.enabled) {
-      const { startDate, endDate } = config.dateFilter;
+    if (config.transcripts.dateFilter && config.transcripts.dateFilter.enabled) {
+      const { startDate, endDate } = config.transcripts.dateFilter;
       if (startDate || endDate) {
         filteredFiles = filteredFiles.filter(file => 
           isWithinDateRange(file.modifiedTime, startDate, endDate)
@@ -178,8 +178,8 @@ async function downloadFilesWithPrefix(drive, folderId, prefix = '') {
     if (filteredFiles.length === 0) {
       const filters = [];
       if (prefix) filters.push(`prefix "${prefix}"`);
-      if (config.dateFilter?.enabled && (config.dateFilter.startDate || config.dateFilter.endDate)) {
-        filters.push(`date range ${config.dateFilter.startDate || 'beginning'} to ${config.dateFilter.endDate || 'now'}`);
+      if (config.transcripts.dateFilter?.enabled && (config.transcripts.dateFilter.startDate || config.transcripts.dateFilter.endDate)) {
+        filters.push(`date range ${config.transcripts.dateFilter.startDate || 'beginning'} to ${config.transcripts.dateFilter.endDate || 'now'}`);
       }
       console.log(`No files found with ${filters.join(' and ')}.`);
       return;
@@ -188,13 +188,13 @@ async function downloadFilesWithPrefix(drive, folderId, prefix = '') {
     console.log(`Found ${filteredFiles.length} file(s) matching criteria...`);
 
     // Create download directory if it doesn't exist
-    const downloadDir = path.join(__dirname, DOWNLOAD_DIR);
+    const downloadDir = path.resolve(DOWNLOAD_DIR);
     if (!fs.existsSync(downloadDir)) {
       fs.mkdirSync(downloadDir, { recursive: true });
     }
 
     // Create markdown output directory if converting to markdown
-    const markdownDir = path.join(__dirname, MARKDOWN_OUTPUT_DIR);
+    const markdownDir = path.resolve(MARKDOWN_OUTPUT_DIR);
     if (CONVERT_TO_MARKDOWN && !fs.existsSync(markdownDir)) {
       fs.mkdirSync(markdownDir, { recursive: true });
     }
@@ -238,7 +238,7 @@ async function main() {
       console.log(`File prefix filter: "${FILE_PREFIX}"`);
     }
     if (config.dateFilter?.enabled) {
-      const { startDate, endDate } = config.dateFilter;
+      const { startDate, endDate } = config.transcripts.dateFilter;
       if (startDate || endDate) {
         console.log(`Date filter: ${startDate || 'beginning'} to ${endDate || 'now'}`);
       }

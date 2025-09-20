@@ -17,12 +17,12 @@ This will install all dependencies including `mysql2` and `ssh2` needed for data
 
 ### 2. Configure SSH and Database Connection
 
-1. Copy the example configuration file:
+1. Copy the example configuration file from the main folder:
    ```bash
-   copy config.example.json config.json
+   copy ../config.example.jsonc ../config.json
    ```
 
-2. Edit `config.json` with your actual connection details:
+2. Edit `../config.json` with your actual connection details in the `dailyReports` section:
    - **SSH Configuration:**
      - `host`: Your SSH server hostname or IP
      - `port`: SSH port (usually 22)

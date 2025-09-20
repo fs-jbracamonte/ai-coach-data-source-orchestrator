@@ -4,7 +4,7 @@ const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // Load config
-const config = require('./config.json');
+const config = require('../config.json');
 
 // Function to make Jira API request
 function makeJiraRequest(path, callback) {
@@ -62,15 +62,15 @@ async function exportJiraData() {
   console.log('API Token:', process.env.JIRA_API_TOKEN ? '***' + process.env.JIRA_API_TOKEN.slice(-4) : 'NOT SET');
 
   // Check if project is configured
-  if (!config.project) {
+  if (!config.jira.project) {
     console.error('Error: No project specified in config.json');
     console.error('Please add a "project" field with your Jira project key (e.g., "AICD", "PROJ", etc.)');
     process.exit(1);
   }
 
   // Build JQL query
-  const project = config.project;
-  const jql = `project = ${project} AND updated >= "${config.start_date}" AND updated <= "${config.end_date}" ORDER BY updated DESC`;
+  const project = config.jira.project;
+  const jql = `project = ${project} AND updated >= "${config.jira.start_date}" AND updated <= "${config.jira.end_date}" ORDER BY updated DESC`;
   console.log(`\nJQL Query: ${jql}\n`);
 
   let allIssues = [];
@@ -162,7 +162,7 @@ async function exportJiraData() {
 
   // Write CSV file
   const csvContent = [headers.join(','), ...rows].join('\n');
-  const filename = `${project}_${config.start_date}_to_${config.end_date}_export.csv`;
+  const filename = `${project}_${config.jira.start_date}_to_${config.jira.end_date}_export.csv`;
   const filepath = path.join(dataDir, filename);
   
   fs.writeFileSync(filepath, csvContent);

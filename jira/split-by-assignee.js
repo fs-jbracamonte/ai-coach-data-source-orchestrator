@@ -5,18 +5,18 @@ const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // Load config
-const config = require('./config.json');
+const config = require('../config.json');
 
 async function splitCsvByAssignee() {
   // Check if project is configured
-  if (!config.project) {
+  if (!config.jira.project) {
     console.error('Error: No project specified in config.json');
     console.error('Please add a "project" field with your Jira project key (e.g., "AICD", "PROJ", etc.)');
     process.exit(1);
   }
 
-  const project = config.project;
-  const inputFile = path.join(__dirname, 'data', `${project}_${config.start_date}_to_${config.end_date}_export.csv`);
+  const project = config.jira.project;
+  const inputFile = path.join(__dirname, 'data', `${project}_${config.jira.start_date}_to_${config.jira.end_date}_export.csv`);
   
   // Check if input file exists
   if (!fs.existsSync(inputFile)) {
@@ -26,11 +26,11 @@ async function splitCsvByAssignee() {
   }
   
   // Check if team_members is configured
-  const filterByTeamMembers = config.team_members && Array.isArray(config.team_members) && config.team_members.length > 0;
+  const filterByTeamMembers = config.jira.team_members && Array.isArray(config.jira.team_members) && config.jira.team_members.length > 0;
   
   console.log(`Reading CSV file: ${inputFile}`);
   if (filterByTeamMembers) {
-    console.log(`Filtering for team members: ${config.team_members.join(', ')}\n`);
+    console.log(`Filtering for team members: ${config.jira.team_members.join(', ')}\n`);
   } else {
     console.log(`No team members specified - including all assignees\n`);
   }
@@ -67,7 +67,7 @@ async function splitCsvByAssignee() {
         }
         
         // Process based on whether we're filtering by team members
-        if (!filterByTeamMembers || config.team_members.includes(assignee)) {
+        if (!filterByTeamMembers || config.jira.team_members.includes(assignee)) {
           // Initialize array for this assignee if not exists
           if (!issuesByAssignee[assignee]) {
             issuesByAssignee[assignee] = [];
@@ -103,7 +103,7 @@ async function splitCsvByAssignee() {
             .replace(/_+/g, '_')
             .replace(/^_|_$/g, '');
           
-          const outputFile = path.join(outputDir, `${project}_${config.start_date}_to_${config.end_date}_${safeAssigneeName}.csv`);
+          const outputFile = path.join(outputDir, `${project}_${config.jira.start_date}_to_${config.jira.end_date}_${safeAssigneeName}.csv`);
           
           // Prepare headers for csv-writer
           const csvHeaders = headers.map(header => ({

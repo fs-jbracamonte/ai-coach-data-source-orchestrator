@@ -6,7 +6,7 @@ const net = require('net');
 const { createObjectCsvWriter } = require('csv-writer');
 
 // Load configuration
-const config = require('./config.json');
+const config = require('../config.json');
 
 class DatabaseConnection {
   constructor() {
@@ -27,8 +27,8 @@ class DatabaseConnection {
           sshClient.forwardOut(
             sock.remoteAddress,
             sock.remotePort,
-            config.database.host,
-            config.database.port,
+            config.dailyReports.database.host,
+            config.dailyReports.database.port,
             (err, stream) => {
               if (err) {
                 sock.end();
@@ -61,7 +61,7 @@ class DatabaseConnection {
       // Read the private key
       let privateKey;
       try {
-        privateKey = fs.readFileSync(path.resolve(config.ssh.privateKeyPath));
+        privateKey = fs.readFileSync(path.resolve(config.dailyReports.ssh.privateKeyPath));
       } catch (err) {
         reject(new Error(`Failed to read private key: ${err.message}`));
         return;
@@ -69,11 +69,11 @@ class DatabaseConnection {
 
       // Connect via SSH
       sshClient.connect({
-        host: config.ssh.host,
-        port: config.ssh.port,
-        username: config.ssh.username,
+        host: config.dailyReports.ssh.host,
+        port: config.dailyReports.ssh.port,
+        username: config.dailyReports.ssh.username,
         privateKey: privateKey,
-        passphrase: config.ssh.passphrase || undefined
+        passphrase: config.dailyReports.ssh.passphrase || undefined
       });
     });
   }
@@ -85,9 +85,9 @@ class DatabaseConnection {
       this.dbConnection = await mysql.createConnection({
         host: '127.0.0.1',
         port: localPort,
-        user: config.database.user,
-        password: config.database.password,
-        database: config.database.database
+        user: config.dailyReports.database.user,
+        password: config.dailyReports.database.password,
+        database: config.dailyReports.database.database
       });
       
       console.log('Connected to MariaDB database');
@@ -189,7 +189,7 @@ async function main() {
     await db.connect();
     
     // Build the employee reports query using config parameters
-    const hasEmployeeId = config.query.employee_id && config.query.employee_id !== '';
+    const hasEmployeeId = config.dailyReports.query.employee_id && config.dailyReports.query.employee_id !== '';
     
     const query = `
       SELECT 
@@ -221,21 +221,21 @@ async function main() {
     
     // Get parameters from config
     const params = [
-      config.query.client_project_id,
+      config.dailyReports.query.client_project_id,
       1,  // report_template_id is always 1
-      config.query.report_date_start,
-      config.query.report_date_end
+      config.dailyReports.query.report_date_start,
+      config.dailyReports.query.report_date_end
     ];
     
     // Only add employee_id to params if it exists
     if (hasEmployeeId) {
-      params.push(config.query.employee_id);
+      params.push(config.dailyReports.query.employee_id);
     }
     
     console.log('\nQuery Parameters:');
-    console.log(`  Client Project ID: ${config.query.client_project_id}`);
-    console.log(`  Employee ID: ${hasEmployeeId ? config.query.employee_id : 'ALL EMPLOYEES'}`);
-    console.log(`  Date Range: ${config.query.report_date_start} to ${config.query.report_date_end}`);
+    console.log(`  Client Project ID: ${config.dailyReports.query.client_project_id}`);
+    console.log(`  Employee ID: ${hasEmployeeId ? config.dailyReports.query.employee_id : 'ALL EMPLOYEES'}`);
+    console.log(`  Date Range: ${config.dailyReports.query.report_date_start} to ${config.dailyReports.query.report_date_end}`);
     console.log(`  Report Template ID: 1 (fixed)`);
     
     console.log('\nExecuting employee reports query...');
@@ -250,7 +250,7 @@ async function main() {
         const lastName = results[0].employee_last_name;
         
         // Generate filename with employee name and date range
-        const filename = `daily-reports-${firstName}-${lastName}-${config.query.report_date_start}-to-${config.query.report_date_end}.csv`;
+        const filename = `daily-reports-${firstName}-${lastName}-${config.dailyReports.query.report_date_start}-to-${config.dailyReports.query.report_date_end}.csv`;
         
         // Save all results to CSV
         await saveResultsAsCSV(results, filename);
@@ -275,7 +275,7 @@ async function main() {
         
         // Save each employee's data to a separate CSV
         for (const [empId, empData] of Object.entries(employeeGroups)) {
-          const filename = `daily-reports-${empData.firstName}-${empData.lastName}-${config.query.report_date_start}-to-${config.query.report_date_end}.csv`;
+          const filename = `daily-reports-${empData.firstName}-${empData.lastName}-${config.dailyReports.query.report_date_start}-to-${config.dailyReports.query.report_date_end}.csv`;
           await saveResultsAsCSV(empData.rows, filename);
           console.log(`  - ${empData.firstName} ${empData.lastName}: ${empData.rows.length} entries`);
         }

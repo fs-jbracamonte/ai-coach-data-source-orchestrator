@@ -1,0 +1,84 @@
+// Configuration example for Data Source Orchestrator
+// This is a JSONC file (JSON with Comments) - your editor should recognize the .jsonc extension
+// Copy this file to config.json and remove all comments before use
+// Standard JSON does not support comments, so they must be removed in the actual config.json
+
+{
+  // Configuration for fetching daily reports from the database via SSH tunnel
+  "dailyReports": {
+    // SSH connection details for creating tunnel to database server
+    "ssh": {
+      "host": "your-ssh-server.com",          // SSH server hostname or IP address
+      "port": 22,                             // SSH port (usually 22)
+      "username": "your-ssh-username",        // SSH username for authentication
+      "privateKeyPath": "./daily-reports/your-key.pem",  // Path to SSH private key file
+      "passphrase": ""                        // SSH key passphrase (leave empty if none)
+    },
+    
+    // MariaDB/MySQL database connection details (accessed through SSH tunnel)
+    "database": {
+      "host": "localhost",                    // Database host (usually localhost when using SSH tunnel)
+      "port": 3306,                          // Database port (3306 for MySQL/MariaDB)
+      "user": "your-db-username",            // Database username
+      "password": "your-db-password",        // Database password
+      "database": "your-database-name"       // Database name to connect to
+    },
+    
+    // Parameters for the employee reports query
+    "query": {
+      "client_project_id": 1,                // Client project ID to filter reports
+      "employee_id": "",                     // Specific employee ID (leave empty for all employees)
+      "report_date_start": "2025-01-01",     // Start date for reports (YYYY-MM-DD format)
+      "report_date_end": "2025-01-31"        // End date for reports (YYYY-MM-DD format)
+    }
+  },
+  
+  // Configuration for Jira ticket export and processing
+  "jira": {
+    "project": "PROJ",                       // Your Jira project key (e.g., 'AICD', 'MVP', 'PROJ')
+    "start_date": "2025-01-01",             // Start date for ticket filtering (YYYY-MM-DD)
+    "end_date": "2025-01-31",               // End date for ticket filtering (YYYY-MM-DD)
+    "team_members": [                        // List of team members to filter tickets by assignee
+      "John Doe",                           // Use exact names as they appear in Jira
+      "Jane Smith"                          // Leave as empty array [] to include all assignees
+    ]
+  },
+  
+  // Configuration for downloading and processing Google Drive transcripts
+  "transcripts": {
+    "folderId": "your-google-drive-folder-id",  // Google Drive folder ID (from the folder URL)
+    "serviceAccountKeyFile": "./transcripts/service-account-key.json",  // Path to Google service account JSON
+    "downloadDir": "./transcripts/downloads",    // Directory where files will be downloaded
+    "filePrefix": "fathom-transcript",          // File prefix filter (empty string "" downloads all files)
+    "sanitizeFilenames": true,                  // Replace special characters for cross-platform compatibility
+    
+    // Date filter for transcript downloads
+    "dateFilter": {
+      "startDate": "2025-01-01",               // Start date for filtering (YYYY-MM-DD)
+      "endDate": "2025-01-31",                 // End date for filtering (YYYY-MM-DD)
+      "enabled": false                         // Set to true to enable date filtering
+    },
+    
+    "convertToMarkdown": true,                 // Auto-convert .txt transcripts to markdown
+    "markdownOutputDir": "./transcripts/markdown-output"  // Output directory for markdown files
+  }
+}
+
+// SETUP NOTES:
+// 
+// Daily Reports:
+// - Requires SSH key file and database credentials
+// - See daily-reports/README.md for detailed setup
+//
+// Jira Integration:
+// - Requires JIRA_EMAIL, JIRA_API_TOKEN, and JIRA_HOST in jira/.env file
+// - See jira/README.md for API token generation
+//
+// Transcripts:
+// - Requires Google Cloud service account with Drive API access
+// - See transcripts/SETUP_GOOGLE_DRIVE.md for service account setup
+//
+// Security:
+// - Never commit config.json to version control
+// - Keep SSH keys and service account files secure
+// - Use strong passwords and rotate API tokens regularly

@@ -4,7 +4,7 @@ const csv = require('csv-parser');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 // Load config
-const config = require('./config.json');
+const config = require('../config.json');
 
 /**
  * Parse complex JSON fields from Jira export
@@ -397,7 +397,7 @@ async function convertCsvToMarkdown(csvFile, outputFile) {
         let markdown = `# JIRA Tickets Report - ${projectName}\n\n`;
         markdown += `**Project Key**: ${projectKey}  \n`;
         markdown += `**Assignee**: ${assigneeName}  \n`;
-        markdown += `**Date Range**: ${config.start_date} to ${config.end_date}  \n`;
+        markdown += `**Date Range**: ${config.jira.start_date} to ${config.jira.end_date}  \n`;
         markdown += `**Total Tickets**: ${tickets.length}  \n`;
         markdown += `**Generated**: ${new Date().toLocaleString()}\n\n`;
         

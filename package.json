@@ -14,7 +14,8 @@
     "daily:query": "node daily-reports/db-query.js",
     "daily:convert": "node daily-reports/csv-to-markdown.js",
     "daily:all": "node daily-reports/run-all.js",
-    "daily:clean": "node daily-reports/clean.js"
+    "daily:clean": "node daily-reports/clean.js",
+    "all": "npm run jira:all && npm run transcripts:download && npm run daily:all"
   },
   "author": "",
   "license": "ISC",

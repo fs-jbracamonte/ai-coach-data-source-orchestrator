@@ -24,7 +24,10 @@
     "project2:jira": "cross-env CONFIG_FILE=config.project2.json npm run jira:all",
     "project2:transcripts": "cross-env CONFIG_FILE=config.project2.json npm run transcripts:download",
     "project2:all": "cross-env CONFIG_FILE=config.project2.json npm run all",
-    "use": "node run-with-config.js"
+    "use": "node run-with-config.js",
+    "datasource:generate": "node datasource-generator/generate_datasources.js",
+    "datasource:from-existing": "node datasource-generator/generate_from_existing.js",
+    "datasource:all": "npm run datasource:generate"
   },
   "author": "",
   "license": "ISC",

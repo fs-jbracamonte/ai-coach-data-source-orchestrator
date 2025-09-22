@@ -189,10 +189,26 @@ This will delete all `.csv` files from `data/` and all `.md` files from `md-outp
 To change which reports are retrieved, update the `dailyReports.query` section in `config.json`:
 
 ```json
-// Query specific employee
+// Query single employee
 "query": {
   "client_project_id": 522,
   "employee_id": 42,
+  "report_date_start": "2025-08-01",
+  "report_date_end": "2025-08-31"
+}
+
+// Query multiple specific employees (array format)
+"query": {
+  "client_project_id": 522,
+  "employee_id": [42, 56, 78],      // Array of employee IDs
+  "report_date_start": "2025-08-01",
+  "report_date_end": "2025-08-31"
+}
+
+// Query multiple employees (comma-separated string)
+"query": {
+  "client_project_id": 522,
+  "employee_id": "42,56,78",        // Comma-separated string
   "report_date_start": "2025-08-01",
   "report_date_end": "2025-08-31"
 }

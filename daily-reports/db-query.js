@@ -190,7 +190,20 @@ async function main() {
     await db.connect();
     
     // Build the employee reports query using config parameters
-    const hasEmployeeId = config.dailyReports.query.employee_id && config.dailyReports.query.employee_id !== '';
+    // Handle employee_id as array, comma-separated string, or single value
+    let employeeIds = [];
+    const employeeIdConfig = config.dailyReports.query.employee_id;
+    
+    if (employeeIdConfig) {
+      if (Array.isArray(employeeIdConfig)) {
+        employeeIds = employeeIdConfig.filter(id => id !== '');
+      } else if (typeof employeeIdConfig === 'string' && employeeIdConfig.trim() !== '') {
+        // Handle comma-separated string
+        employeeIds = employeeIdConfig.split(',').map(id => id.trim()).filter(id => id !== '');
+      }
+    }
+    
+    const hasEmployeeIds = employeeIds.length > 0;
     
     const query = `
       SELECT 
@@ -215,7 +228,7 @@ async function main() {
           client_project_id = ?
           AND er.report_template_id = ?
           AND er.report_date BETWEEN ? AND ?
-          ${hasEmployeeId ? 'AND employee_id = ?' : ''}
+          ${hasEmployeeIds ? `AND er.employee_id IN (${employeeIds.map(() => '?').join(',')})` : ''}
       ORDER BY 
           er.employee_id, er.report_date DESC
     `;
@@ -228,14 +241,14 @@ async function main() {
       config.dailyReports.query.report_date_end
     ];
     
-    // Only add employee_id to params if it exists
-    if (hasEmployeeId) {
-      params.push(config.dailyReports.query.employee_id);
+    // Add employee IDs to params if they exist
+    if (hasEmployeeIds) {
+      params.push(...employeeIds);
     }
     
     console.log('\nQuery Parameters:');
     console.log(`  Client Project ID: ${config.dailyReports.query.client_project_id}`);
-    console.log(`  Employee ID: ${hasEmployeeId ? config.dailyReports.query.employee_id : 'ALL EMPLOYEES'}`);
+    console.log(`  Employee ID(s): ${hasEmployeeIds ? employeeIds.join(', ') : 'ALL EMPLOYEES'}`);
     console.log(`  Date Range: ${config.dailyReports.query.report_date_start} to ${config.dailyReports.query.report_date_end}`);
     console.log(`  Report Template ID: 1 (fixed)`);
     
@@ -245,7 +258,7 @@ async function main() {
     console.log(`\nQuery returned ${results.length} rows`);
     
     if (results.length > 0) {
-      if (hasEmployeeId) {
+      if (hasEmployeeIds && employeeIds.length === 1) {
         // Single employee - save as before
         const firstName = results[0].employee_first_name;
         const lastName = results[0].employee_last_name;

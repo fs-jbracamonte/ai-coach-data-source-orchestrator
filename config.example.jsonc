@@ -12,7 +12,11 @@
     // Parameters for the employee reports query
     "query": {
       "client_project_id": 1,                // Client project ID to filter reports
-      "employee_id": "",                     // Specific employee ID (leave empty for all employees)
+      "employee_id": "",                     // Employee ID(s) - supports multiple formats:
+                                             // - Empty string "" for all employees
+                                             // - Single ID: "123" or 123
+                                             // - Multiple IDs as array: [123, 456, 789]
+                                             // - Multiple IDs as comma-separated string: "123,456,789"
       "report_date_start": "2025-01-01",     // Start date for reports (YYYY-MM-DD format)
       "report_date_end": "2025-01-31"        // End date for reports (YYYY-MM-DD format)
     }

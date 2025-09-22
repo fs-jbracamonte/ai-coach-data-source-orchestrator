@@ -9,6 +9,8 @@ yarn-error.log*
 .env.local
 .env.*.local
 config.json
+config.*.json
+!config.*.example.json
 !config.example.jsonc
 service-account-key.json
 credentials.json

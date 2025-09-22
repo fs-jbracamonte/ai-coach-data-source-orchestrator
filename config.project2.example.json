@@ -1,0 +1,34 @@
+{
+  "dailyReports": {
+    "query": {
+      "client_project_id": 523,
+      "employee_id": [101, 102, 103],
+      "report_date_start": "2025-09-01",
+      "report_date_end": "2025-09-30"
+    }
+  },
+  "jira": {
+    "project": "MVP",
+    "start_date": "2025-09-01",
+    "end_date": "2025-09-30",
+    "team_members": [
+      "John Doe",
+      "Jane Smith",
+      "Bob Johnson"
+    ]
+  },
+  "transcripts": {
+    "folderId": "2XyzH_differentFolderID_example",
+    "serviceAccountKeyFile": "./service-account-key.json",
+    "downloadDir": "./transcripts/downloads/project2",
+    "filePrefix": "mvp-meeting",
+    "sanitizeFilenames": true,
+    "dateFilter": {
+      "startDate": "2025-09-01",
+      "endDate": "2025-09-30",
+      "enabled": true
+    },
+    "convertToMarkdown": true,
+    "markdownOutputDir": "./transcripts/markdown-output/project2"
+  }
+}

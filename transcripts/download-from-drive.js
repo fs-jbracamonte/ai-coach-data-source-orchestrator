@@ -4,7 +4,10 @@ const path = require('path');
 const transcriptToMarkdown = require('./transcript-to-markdown');
 
 // Load configuration
-const config = require('../config.json');
+const configFile = process.env.CONFIG_FILE || 'config.json';
+const configPath = path.resolve(process.cwd(), configFile);
+console.log(`Using config file: ${configPath}`);
+const config = require(configPath);
 
 // Configuration from config.json
 const FOLDER_ID = config.transcripts.folderId;

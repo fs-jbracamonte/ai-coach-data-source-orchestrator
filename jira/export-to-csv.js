@@ -4,7 +4,10 @@ const path = require('path');
 require('dotenv').config();
 
 // Load config
-const config = require('../config.json');
+const configFile = process.env.CONFIG_FILE || 'config.json';
+const configPath = path.resolve(process.cwd(), configFile);
+console.log(`Using config file: ${configPath}`);
+const config = require(configPath);
 
 // Function to make Jira API request
 function makeJiraRequest(path, callback) {

@@ -1,0 +1,33 @@
+{
+  "dailyReports": {
+    "query": {
+      "client_project_id": 522,
+      "employee_id": "",
+      "report_date_start": "2025-08-01",
+      "report_date_end": "2025-08-31"
+    }
+  },
+  "jira": {
+    "project": "AICD",
+    "start_date": "2025-08-01",
+    "end_date": "2025-08-31",
+    "team_members": [
+      "Mark Jerly Bundalian",
+      "Jamnilloh Bracamonte"
+    ]
+  },
+  "transcripts": {
+    "folderId": "1WgzH_coNUo2OVYbjRNnBL1qJ3UG8LtIH",
+    "serviceAccountKeyFile": "./service-account-key.json",
+    "downloadDir": "./transcripts/downloads/project1",
+    "filePrefix": "project1-transcript",
+    "sanitizeFilenames": true,
+    "dateFilter": {
+      "startDate": "2025-08-01",
+      "endDate": "2025-08-31",
+      "enabled": true
+    },
+    "convertToMarkdown": true,
+    "markdownOutputDir": "./transcripts/markdown-output/project1"
+  }
+}

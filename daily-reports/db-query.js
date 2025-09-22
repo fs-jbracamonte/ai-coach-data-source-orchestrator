@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const net = require('net');
 const { createObjectCsvWriter } = require('csv-writer');
+require('dotenv').config();
 
 // Load configuration
 const config = require('../config.json');
@@ -27,8 +28,8 @@ class DatabaseConnection {
           sshClient.forwardOut(
             sock.remoteAddress,
             sock.remotePort,
-            config.dailyReports.database.host,
-            config.dailyReports.database.port,
+            process.env.DB_HOST,
+            parseInt(process.env.DB_PORT),
             (err, stream) => {
               if (err) {
                 sock.end();
@@ -61,7 +62,7 @@ class DatabaseConnection {
       // Read the private key
       let privateKey;
       try {
-        privateKey = fs.readFileSync(path.resolve(config.dailyReports.ssh.privateKeyPath));
+        privateKey = fs.readFileSync(path.resolve(process.env.SSH_PRIVATE_KEY_PATH));
       } catch (err) {
         reject(new Error(`Failed to read private key: ${err.message}`));
         return;
@@ -69,11 +70,11 @@ class DatabaseConnection {
 
       // Connect via SSH
       sshClient.connect({
-        host: config.dailyReports.ssh.host,
-        port: config.dailyReports.ssh.port,
-        username: config.dailyReports.ssh.username,
+        host: process.env.SSH_HOST,
+        port: parseInt(process.env.SSH_PORT),
+        username: process.env.SSH_USERNAME,
         privateKey: privateKey,
-        passphrase: config.dailyReports.ssh.passphrase || undefined
+        passphrase: process.env.SSH_PASSPHRASE || undefined
       });
     });
   }
@@ -85,9 +86,9 @@ class DatabaseConnection {
       this.dbConnection = await mysql.createConnection({
         host: '127.0.0.1',
         port: localPort,
-        user: config.dailyReports.database.user,
-        password: config.dailyReports.database.password,
-        database: config.dailyReports.database.database
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_DATABASE
       });
       
       console.log('Connected to MariaDB database');

@@ -11,7 +11,7 @@ Simple script to export Jira issues to CSV using your JQL query.
    
    Note: The @atlassian/jira package is not required - the script uses direct HTTPS requests.
 
-2. Create `.env` file in jira folder:
+2. Edit `.env` file in the main project folder with your Jira credentials:
    ```
    JIRA_HOST=your-domain.atlassian.net
    JIRA_EMAIL=your-email@example.com
@@ -23,7 +23,7 @@ Simple script to export Jira issues to CSV using your JQL query.
    - It must be a Jira domain, not Bitbucket or other Atlassian services
    - Example: `mycompany.atlassian.net`
 
-3. Edit `config.json` to set your project, date range, and team members:
+3. Edit `config.json` in the main folder to set your project, date range, and team members under the `jira` section:
    ```json
    {
      "project": "AICD",

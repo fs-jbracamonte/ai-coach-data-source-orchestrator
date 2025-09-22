@@ -17,12 +17,13 @@ This will install all dependencies including `mysql2` and `ssh2` needed for data
 
 ### 2. Configure SSH and Database Connection
 
-1. Copy the example configuration file from the main folder:
+1. Copy the example files from the main folder:
    ```bash
+   copy ../example.env ../.env
    copy ../config.example.jsonc ../config.json
    ```
 
-2. Edit `../config.json` with your actual connection details in the `dailyReports` section:
+2. Edit `../.env` with your SSH and database connection details:
    - **SSH Configuration:**
      - `host`: Your SSH server hostname or IP
      - `port`: SSH port (usually 22)
@@ -108,7 +109,7 @@ This will:
    - Report dates
    - Report template names
    - Client project information
-3. Filter results based on the parameters in `config.json`:
+3. Filter results based on the parameters in `config.json` under `dailyReports.query`:
    - Specific client project
    - Specific employee (or all employees if left empty)
    - Date range
@@ -185,7 +186,7 @@ This will delete all `.csv` files from `data/` and all `.md` files from `md-outp
 
 ### Modifying Query Parameters
 
-To change which reports are retrieved, update the `query` section in `config.json`:
+To change which reports are retrieved, update the `dailyReports.query` section in `config.json`:
 
 ```json
 // Query specific employee
@@ -244,7 +245,7 @@ async function generateReport() {
 
 ## Security Notes
 
-1. **Never commit `config.json`** - It contains sensitive credentials
+1. **Never commit `.env` or `config.json`** - They contain sensitive credentials
 2. **Keep SSH keys secure** - The `ssh-keys` directory is gitignored
 3. **Use environment variables** for production deployments
 4. **Restrict database user permissions** to only what's needed

@@ -2,28 +2,13 @@
 // This is a JSONC file (JSON with Comments) - your editor should recognize the .jsonc extension
 // Copy this file to config.json and remove all comments before use
 // Standard JSON does not support comments, so they must be removed in the actual config.json
+//
+// IMPORTANT: Sensitive credentials (SSH, Database, Jira API) are now stored in .env file
+// Copy example.env to .env and fill in your actual credentials
 
 {
-  // Configuration for fetching daily reports from the database via SSH tunnel
+  // Configuration for fetching daily reports from the database
   "dailyReports": {
-    // SSH connection details for creating tunnel to database server
-    "ssh": {
-      "host": "your-ssh-server.com",          // SSH server hostname or IP address
-      "port": 22,                             // SSH port (usually 22)
-      "username": "your-ssh-username",        // SSH username for authentication
-      "privateKeyPath": "./daily-reports/your-key.pem",  // Path to SSH private key file
-      "passphrase": ""                        // SSH key passphrase (leave empty if none)
-    },
-    
-    // MariaDB/MySQL database connection details (accessed through SSH tunnel)
-    "database": {
-      "host": "localhost",                    // Database host (usually localhost when using SSH tunnel)
-      "port": 3306,                          // Database port (3306 for MySQL/MariaDB)
-      "user": "your-db-username",            // Database username
-      "password": "your-db-password",        // Database password
-      "database": "your-database-name"       // Database name to connect to
-    },
-    
     // Parameters for the employee reports query
     "query": {
       "client_project_id": 1,                // Client project ID to filter reports
@@ -47,7 +32,7 @@
   // Configuration for downloading and processing Google Drive transcripts
   "transcripts": {
     "folderId": "your-google-drive-folder-id",  // Google Drive folder ID (from the folder URL)
-    "serviceAccountKeyFile": "./transcripts/service-account-key.json",  // Path to Google service account JSON
+    "serviceAccountKeyFile": "./service-account-key.json",  // Path to Google service account JSON (now in main folder)
     "downloadDir": "./transcripts/downloads",    // Directory where files will be downloaded
     "filePrefix": "fathom-transcript",          // File prefix filter (empty string "" downloads all files)
     "sanitizeFilenames": true,                  // Replace special characters for cross-platform compatibility
@@ -66,19 +51,21 @@
 
 // SETUP NOTES:
 // 
-// Daily Reports:
-// - Requires SSH key file and database credentials
-// - See daily-reports/README.md for detailed setup
+// 1. Environment Variables (.env file):
+//    - Copy example.env to .env
+//    - Fill in all credentials (Jira, SSH, Database)
+//    - Never commit .env to version control
 //
-// Jira Integration:
-// - Requires JIRA_EMAIL, JIRA_API_TOKEN, and JIRA_HOST in jira/.env file
-// - See jira/README.md for API token generation
+// 2. Service Account Key:
+//    - Place service-account-key.json in the main project folder
+//    - This file is required for Google Drive transcript downloads
+//    - See transcripts/SETUP_GOOGLE_DRIVE.md for setup instructions
 //
-// Transcripts:
-// - Requires Google Cloud service account with Drive API access
-// - See transcripts/SETUP_GOOGLE_DRIVE.md for service account setup
+// 3. SSH Private Key:
+//    - Place your SSH private key file in the location specified in .env
+//    - Default location: ./daily-reports/your-key.pem
 //
-// Security:
-// - Never commit config.json to version control
-// - Keep SSH keys and service account files secure
-// - Use strong passwords and rotate API tokens regularly
+// 4. Module-specific setup:
+//    - Daily Reports: See daily-reports/README.md
+//    - Jira Integration: See jira/README.md
+//    - Transcripts: See transcripts/SETUP_GOOGLE_DRIVE.md

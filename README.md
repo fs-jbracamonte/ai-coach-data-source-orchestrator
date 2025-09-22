@@ -6,8 +6,11 @@ A collection of tools for aggregating and processing data from multiple sources 
 
 ```
 data-source-orchestrator/
+├── .env                     # Environment variables (create from example.env)
+├── example.env              # Example environment variables file
 ├── config.json              # Main configuration file (create from config.example.jsonc)
 ├── config.example.jsonc     # Example configuration with comments (JSON with Comments format)
+├── service-account-key.json # Google service account credentials (you provide this)
 ├── daily-reports/           # Database report extraction and processing
 ├── jira/                    # Jira ticket export and analysis
 ├── transcripts/             # Google Drive transcript download and conversion
@@ -23,10 +26,12 @@ data-source-orchestrator/
 
 2. **Configure the Application**
    ```bash
-   # Copy the example configuration
+   # Copy the example files
+   cp example.env .env
    cp config.example.jsonc config.json
    
-   # Edit config.json with your actual credentials and settings
+   # Edit .env with your credentials (Jira, SSH, Database)
+   # Edit config.json with your project settings (remove all comments)
    ```
 
 3. **Set Up Each Module**
@@ -39,9 +44,8 @@ data-source-orchestrator/
 The `config.json` file contains three main sections:
 
 ### dailyReports
-- SSH tunnel configuration for secure database access
-- MariaDB/MySQL database connection details
 - Query parameters for filtering employee reports
+- SSH and database credentials are now in .env file
 
 ### jira
 - Project key for Jira export
@@ -56,10 +60,12 @@ The `config.json` file contains three main sections:
 
 ## Security Notes
 
-- **Never commit `config.json`** to version control - it contains sensitive credentials
-- The `.gitignore` file should include `config.json` to prevent accidental commits
-- Store service account keys and SSH private keys securely
-- Use environment variables for additional security when deploying
+- **Never commit `.env` or `config.json`** to version control
+- **Never commit `service-account-key.json`** - keep it secure
+- The `.gitignore` file includes these files to prevent accidental commits
+- Store SSH private keys securely
+- All sensitive credentials are now in the `.env` file
+- The `config.json` only contains non-sensitive configuration
 
 ## Common Date Ranges
 

@@ -29,7 +29,7 @@ This script downloads files from a Google Drive folder using Service Account aut
 3. Click "Add Key" > "Create New Key"
 4. Choose "JSON" format
 5. Click "Create" - this will download a JSON key file
-6. **Save this file as `service-account-key.json` in the transcripts folder**
+6. **Save this file as `service-account-key.json` in the main project folder (not in transcripts)**
 
 ### 4. Share Your Google Drive Folder
 
@@ -47,7 +47,7 @@ Edit `config.json` to customize the download behavior:
 ```json
 {
   "folderId": "1WgzH_coNUo2OVYbjRNnBL1qJ3UG8LtIH",
-  "serviceAccountKeyFile": "./service-account-key.json",
+  "serviceAccountKeyFile": "./service-account-key.json",  // Now in main folder
   "downloadDir": "./downloads",
   "filePrefix": "",  // Set to download only files starting with this prefix
   "sanitizeFilenames": true,  // Clean special characters from filenames (recommended for Windows)
@@ -178,14 +178,14 @@ Files will be downloaded to: `transcripts/downloads/`
 
 ## Troubleshooting
 
-- **"Error initializing Google Drive API"**: Check that `service-account-key.json` exists in the transcripts folder
+- **"Error initializing Google Drive API"**: Check that `service-account-key.json` exists in the main project folder
 - **"No files found"**: Verify the folder is shared with the service account email
 - **"Permission denied"**: Ensure the service account has at least "Viewer" access to the folder
 
 ## Security Note
 
-⚠️ **Never commit the `service-account-key.json` file to version control!** Add it to your `.gitignore` file:
+⚠️ **Never commit the `service-account-key.json` file to version control!** It's already included in `.gitignore`:
 
 ```
-transcripts/service-account-key.json
+service-account-key.json
 ```

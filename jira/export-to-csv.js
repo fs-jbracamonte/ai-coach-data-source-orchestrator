@@ -1,7 +1,7 @@
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config();
 
 // Load config
 const config = require('../config.json');

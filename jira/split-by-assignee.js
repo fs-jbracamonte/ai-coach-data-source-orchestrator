@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config();
 
 // Load config
 const config = require('../config.json');

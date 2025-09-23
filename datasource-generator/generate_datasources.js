@@ -238,15 +238,11 @@ class DatasourceGenerator {
     const fathomContent = this.readMarkdownFiles(this.transcriptsDir) ||
                          '# Transcripts\n\nNo transcripts found.';
     
-    // CLAAP is empty for now
-    const claapContent = '';
-    
     // Replace placeholders in template
     let datasource = template
       .replace('{{DAILY_CONTENT}}', dailyContent)
       .replace('{{JIRA_CONTENT}}', jiraContent)
       .replace('{{FATHOM_CONTENT}}', fathomContent)
-      .replace('{{CLAAP_CONTENT}}', claapContent)
       .replace('{{TEAM_MEMBER_NAME}}', teamMemberName)
       .replace('{{GENERATED_DATE}}', new Date().toLocaleString());
     

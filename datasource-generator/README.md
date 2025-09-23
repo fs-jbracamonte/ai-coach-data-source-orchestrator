@@ -4,7 +4,6 @@ This module generates Python datasource files for each team member by combining 
 - Daily reports
 - JIRA tickets
 - Meeting transcripts (Fathom)
-- CLAAP (if available)
 
 ## Configuration
 
@@ -76,8 +75,6 @@ Each file contains:
 - `DAILY_TEXT` - Daily reports specific to the team member
 - `JIRA_TEXT` - JIRA tickets assigned to the team member
 - `FATHOM_TEXT` - All meeting transcripts (shared across team members)
-- `CLAAP_TEXT` - CLAAP data (if available)
-- `PROJECT_CONTEXT_AND_HEALTH` - Static project context information
 
 ## File Structure
 

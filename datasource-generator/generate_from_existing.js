@@ -2,6 +2,12 @@ const fs = require('fs');
 const path = require('path');
 const DatasourceGenerator = require('./generate_datasources');
 
+// Load team name mapping for project folder info
+const nameMappingPath = path.join(__dirname, 'team-name-mapping.json');
+const nameMapping = fs.existsSync(nameMappingPath) 
+  ? require(nameMappingPath) 
+  : { mappings: {} };
+
 /**
  * Generate datasource files from existing markdown outputs
  * This script assumes the markdown files have already been generated

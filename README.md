@@ -171,6 +171,23 @@ Each module can use different date ranges. To synchronize them:
 }
 ```
 
+## Cleaning Generated Data
+
+Clean specific data types:
+```bash
+npm run daily:clean       # Clean daily reports CSV and markdown files
+npm run jira:clean        # Clean JIRA CSV and markdown files
+npm run transcripts:clean # Clean downloaded transcripts and markdown files
+npm run datasource:clean  # Clean generated datasource Python files
+```
+
+Clean all generated data at once:
+```bash
+npm run clean:all
+```
+
+This will remove all generated files while preserving the directory structure and configuration files.
+
 ## Support
 
 For detailed setup and usage instructions, refer to the README files in each module's directory.

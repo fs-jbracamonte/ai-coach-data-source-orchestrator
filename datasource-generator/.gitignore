@@ -1,5 +1,6 @@
-# Ignore generated datasource files
-output/datasource_*.py
+# Ignore generated datasource files in any project folder
+output/*/datasource_*.py
 
 # Keep the output directory structure
 !output/.gitkeep
+!output/*/.gitkeep

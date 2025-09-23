@@ -15,7 +15,9 @@ const nameMapping = fs.existsSync(nameMappingPath)
 
 class DatasourceGenerator {
   constructor() {
-    this.outputDir = path.join(__dirname, 'output');
+    // Get project folder from config
+    const projectFolder = nameMapping.projectFolder || 'default';
+    this.outputDir = path.join(__dirname, 'output', projectFolder);
     this.templatePath = path.join(__dirname, 'templates', 'datasource_template.py');
     this.dailyReportsDir = path.join(__dirname, '..', 'daily-reports', 'md-output');
     this.jiraDir = path.join(__dirname, '..', 'jira', 'md_output');
@@ -69,28 +71,9 @@ class DatasourceGenerator {
   async generateDailyReports() {
     console.log('\n=== Generating Daily Reports ===\n');
     
-    // Save original employee_id
-    const originalEmployeeId = config.dailyReports.query.employee_id;
-    
-    // Set to empty to query all employees
-    config.dailyReports.query.employee_id = "";
-    
-    // Write temporary config
-    const tempConfigPath = path.join(__dirname, '..', 'temp-config.json');
-    fs.writeFileSync(tempConfigPath, JSON.stringify(config, null, 2));
-    
-    try {
-      // Run daily reports generation with temp config
-      process.env.CONFIG_FILE = tempConfigPath;
-      await this.runCommand('npm', ['run', 'daily:all']);
-    } finally {
-      // Restore original config
-      config.dailyReports.query.employee_id = originalEmployeeId;
-      if (fs.existsSync(tempConfigPath)) {
-        fs.unlinkSync(tempConfigPath);
-      }
-      delete process.env.CONFIG_FILE;
-    }
+    // Use the configured employee IDs from config.json
+    // The daily reports query will handle the employee filtering
+    await this.runCommand('npm', ['run', 'daily:all']);
   }
 
   /**
@@ -186,19 +169,49 @@ class DatasourceGenerator {
     
     const files = fs.readdirSync(directory).filter(f => f.endsWith('.md'));
     
-    // Try to find file containing team member name (with underscores)
-    const safeName = teamMemberName.replace(/\s+/g, '_');
-    const matchingFiles = files.filter(f => 
-      f.toLowerCase().includes(safeName.toLowerCase()) ||
-      f.toLowerCase().includes(teamMemberName.toLowerCase().replace(/\s+/g, '_'))
-    );
+    // Try to find file containing team member name
+    // Handle different separators: spaces, underscores, and hyphens
+    const nameVariations = [
+      teamMemberName,                                    // Original: "Mark Jerly Bundalian"
+      teamMemberName.replace(/\s+/g, '_'),              // Underscores: "Mark_Jerly_Bundalian"
+      teamMemberName.replace(/\s+/g, '-'),              // Hyphens: "Mark-Jerly-Bundalian"
+      teamMemberName.replace(/\s+/g, ' '),              // Spaces normalized
+    ];
+    
+    // Also try variations with mixed spaces and hyphens
+    const nameParts = teamMemberName.split(' ');
+    if (nameParts.length >= 2) {
+      const firstName = nameParts[0];
+      const lastName = nameParts[nameParts.length - 1];
+      nameVariations.push(`${firstName}-${lastName}`);   // "Mark-Bundalian"
+      nameVariations.push(`${firstName}_${lastName}`);   // "Mark_Bundalian"
+      nameVariations.push(`${firstName} ${lastName}`);   // "Mark Bundalian"
+      
+      // For middle names, try space before last name with hyphen
+      if (nameParts.length === 3) {
+        const middleName = nameParts[1];
+        nameVariations.push(`${firstName} ${middleName}-${lastName}`);  // "Mark Jerly-Bundalian"
+        nameVariations.push(`${firstName}-${middleName}-${lastName}`);  // "Mark-Jerly-Bundalian"
+        nameVariations.push(`${firstName}_${middleName}_${lastName}`);  // "Mark_Jerly_Bundalian"
+      }
+    }
+    
+    // Find files that match any variation
+    const matchingFiles = files.filter(f => {
+      const lowerFile = f.toLowerCase();
+      return nameVariations.some(variation => 
+        lowerFile.includes(variation.toLowerCase())
+      );
+    });
     
     if (matchingFiles.length > 0) {
+      console.log(`  Found ${matchingFiles.length} matching file(s) for ${teamMemberName}: ${matchingFiles.join(', ')}`);
       // Use the most recent file if multiple matches
       const filePath = path.join(directory, matchingFiles[0]);
       return fs.readFileSync(filePath, 'utf8').trim();
     }
     
+    console.log(`  No matching files found for ${teamMemberName} in ${directory}`);
     return '';
   }
 

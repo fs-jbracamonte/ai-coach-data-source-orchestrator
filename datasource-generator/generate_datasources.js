@@ -33,9 +33,10 @@ class DatasourceGenerator {
    * Get the short name for a team member
    */
   getShortName(fullName) {
-    const shortName = nameMapping.mappings[fullName];
-    if (shortName) {
-      return shortName;
+    const mapping = nameMapping.mappings[fullName];
+    if (mapping) {
+      // Handle both old string format and new object format
+      return typeof mapping === 'string' ? mapping : mapping.shortName;
     }
     
     // If no mapping, use full name converted to lowercase with underscores
@@ -178,6 +179,17 @@ class DatasourceGenerator {
       teamMemberName.replace(/\s+/g, ' '),              // Spaces normalized
     ];
     
+    // Add aliases from mapping if available
+    const mapping = nameMapping.mappings[teamMemberName];
+    if (mapping && typeof mapping === 'object') {
+      if (mapping.aliases && Array.isArray(mapping.aliases)) {
+        nameVariations.push(...mapping.aliases);
+      }
+      if (mapping.fullName) {
+        nameVariations.push(mapping.fullName);
+      }
+    }
+    
     // Also try variations with mixed spaces and hyphens
     const nameParts = teamMemberName.split(' ');
     if (nameParts.length >= 2) {
@@ -238,15 +250,11 @@ class DatasourceGenerator {
     const fathomContent = this.readMarkdownFiles(this.transcriptsDir) ||
                          '# Transcripts\n\nNo transcripts found.';
     
-    // CLAAP is empty for now
-    const claapContent = '';
-    
     // Replace placeholders in template
     let datasource = template
       .replace('{{DAILY_CONTENT}}', dailyContent)
       .replace('{{JIRA_CONTENT}}', jiraContent)
       .replace('{{FATHOM_CONTENT}}', fathomContent)
-      .replace('{{CLAAP_CONTENT}}', claapContent)
       .replace('{{TEAM_MEMBER_NAME}}', teamMemberName)
       .replace('{{GENERATED_DATE}}', new Date().toLocaleString());
     

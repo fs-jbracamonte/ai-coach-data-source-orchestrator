@@ -1,7 +1,56 @@
 {
-  "projectFolder": "ai-coach",
+  "projectFolder": "rocks",
   "mappings": {
-    "Jamnilloh Bracamonte": "jam",
-    "Mark Jerly Bundalian": "mark"
+    "Allan Sheldon Ibañez": {
+      "shortName": "allan",
+      "aliases": [
+        "Allan Sheldon Ibanez",
+        "Allan_Sheldon_Iba_ez"
+      ]
+    },
+    "Jong": {
+      "shortName": "junelito",
+      "fullName": "Junelito Salugsugan",
+      "aliases": [
+        "Junelito-Salugsugan",
+        "Jong"
+      ]
+    },
+    "Eusebio Mamac": {
+      "shortName": "eusebio"
+    },
+    "Carmencito Berdon": {
+      "shortName": "carmencito"
+    },
+    "Aro Arneil": {
+      "shortName": "arneil",
+      "aliases": [
+        "Arneil Aro",
+        "Arneil-Aro"
+      ]
+    },
+    "Jan Leryc Ibalio": {
+      "shortName": "leryc"
+    },
+    "Leryc Ibalio": {
+      "shortName": "leryc"
+    },
+    "Ryan Sutana": {
+      "shortName": "ryan"
+    },
+    "Michael Roy M. Otilla": {
+      "shortName": "michael",
+      "aliases": [
+        "Michael Roy-Otilla",
+        "Michael Roy Otilla",
+        "Michael_Roy_M_Otilla"
+      ]
+    },
+    "Reynaldo Rama": {
+      "shortName": "reynaldo"
+    },
+    "Rangie Laurente": {
+      "shortName": "rangie"
+    }
   }
 }

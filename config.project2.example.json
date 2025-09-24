@@ -8,6 +8,7 @@
     }
   },
   "jira": {
+    "host": "fullscale.atlassian.net",
     "project": "MVP",
     "start_date": "2025-09-01",
     "end_date": "2025-09-30",

@@ -13,31 +13,34 @@ Simple script to export Jira issues to CSV using your JQL query.
 
 2. Edit `.env` file in the main project folder with your Jira credentials:
    ```
-   JIRA_HOST=your-domain.atlassian.net
    JIRA_EMAIL=your-email@example.com
    JIRA_API_TOKEN=your-api-token
    ```
    
    **Important:** 
-   - JIRA_HOST should be your Jira instance domain WITHOUT https://
+   - JIRA_HOST is now configured in the config.json file under jira.host
    - It must be a Jira domain, not Bitbucket or other Atlassian services
-   - Example: `mycompany.atlassian.net`
+   - Example: `"host": "mycompany.atlassian.net"`
 
-3. Edit `config.json` in the main folder to set your project, date range, and team members under the `jira` section:
+3. Edit `config.json` in the main folder to set your project, host, date range, and team members under the `jira` section:
    ```json
    {
-     "project": "AICD",
-     "start_date": "2025-08-01",
-     "end_date": "2025-08-31",
-     "team_members": [
-       "Jamnilloh Bracamonte",
-       "Mark Jerly Bundalian",
-       "Ashley Ken Comandao"
-     ]
+     "jira": {
+       "host": "mycompany.atlassian.net",
+       "project": "AICD",
+       "start_date": "2025-08-01",
+       "end_date": "2025-08-31",
+       "team_members": [
+         "Jamnilloh Bracamonte",
+         "Mark Jerly Bundalian",
+         "Ashley Ken Comandao"
+       ]
+     }
    }
    ```
    
    **Configuration Options:**
+   - `host`: **(Required)** The Jira instance domain (e.g., "mycompany.atlassian.net")
    - `project`: **(Required)** The Jira project key (e.g., "AICD", "PROJ", etc.)
    - `start_date` & `end_date`: **(Required)** Date range for the export
    - `team_members`: **(Optional)** Array of assignee names to filter by

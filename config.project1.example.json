@@ -8,6 +8,7 @@
     }
   },
   "jira": {
+    "host": "fullscale.atlassian.net",
     "project": "AICD",
     "start_date": "2025-08-01",
     "end_date": "2025-08-31",

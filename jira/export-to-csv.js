@@ -13,8 +13,11 @@ const config = require(configPath);
 function makeJiraRequest(path, callback) {
   const auth = Buffer.from(`${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString('base64');
   
+  // Get host from config instead of environment
+  const jiraHost = config.jira.host.replace('https://', '').replace('http://', '').replace(/\/$/, '');
+  
   const options = {
-    hostname: process.env.JIRA_HOST.replace('https://', '').replace('http://', '').replace(/\/$/, ''),
+    hostname: jiraHost,
     path: path,
     method: 'GET',
     headers: {
@@ -52,15 +55,22 @@ function makeJiraRequest(path, callback) {
 }
 
 async function exportJiraData() {
-  // Check environment variables
-  if (!process.env.JIRA_EMAIL || !process.env.JIRA_API_TOKEN || !process.env.JIRA_HOST) {
+  // Check environment variables (remove JIRA_HOST check)
+  if (!process.env.JIRA_EMAIL || !process.env.JIRA_API_TOKEN) {
     console.error('Missing required environment variables!');
-    console.error('Please set JIRA_HOST, JIRA_EMAIL, and JIRA_API_TOKEN in your .env file');
+    console.error('Please set JIRA_EMAIL and JIRA_API_TOKEN in your .env file');
+    process.exit(1);
+  }
+
+  // Check if jira.host is configured
+  if (!config.jira.host) {
+    console.error('Error: No host specified in config.json');
+    console.error('Please add a "host" field under "jira" with your Jira instance domain');
     process.exit(1);
   }
 
   console.log('Connecting to Jira:');
-  console.log('Host:', process.env.JIRA_HOST);
+  console.log('Host:', config.jira.host);
   console.log('Email:', process.env.JIRA_EMAIL);
   console.log('API Token:', process.env.JIRA_API_TOKEN ? '***' + process.env.JIRA_API_TOKEN.slice(-4) : 'NOT SET');
 

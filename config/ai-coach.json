@@ -1,0 +1,35 @@
+{
+  "projectName": "AI Coach",
+  "dailyReports": {
+    "query": {
+      "client_project_id": 522,
+      "employee_id": [42,10147],
+      "report_date_start": "2025-08-01",
+      "report_date_end": "2025-08-31"
+    }
+  },
+  "jira": {
+    "host": "fullscaleventures.atlassian.net",
+    "project": "AICD",
+    "start_date": "2025-08-01",
+    "end_date": "2025-08-31",
+    "team_members": [
+      "Mark Jerly Bundalian",
+      "Jamnilloh Bracamonte"
+    ]
+  },
+  "transcripts": {
+    "folderId": "1WgzH_coNUo2OVYbjRNnBL1qJ3UG8LtIH",
+    "serviceAccountKeyFile": "./service-account-key.json",
+    "downloadDir": "./transcripts/downloads",
+    "filePrefix": "fathom-transcript",
+    "sanitizeFilenames": true,
+    "dateFilter": {
+      "startDate": "2025-09-01",
+      "endDate": "2025-09-30",
+      "enabled": true
+    },
+    "convertToMarkdown": true,
+    "markdownOutputDir": "./transcripts/markdown-output"
+  }
+}

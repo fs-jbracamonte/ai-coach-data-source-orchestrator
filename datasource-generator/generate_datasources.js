@@ -7,11 +7,26 @@ const configPath = path.resolve(process.env.CONFIG_FILE || './config.json');
 console.log(`Using config file: ${configPath}`);
 const config = require(configPath);
 
-// Load team name mapping
+// Extract project name from config file path
+const projectName = path.basename(configPath, '.json');
+console.log(`Project name: ${projectName}`);
+
+// Load team name mapping - try project-specific mapping first, then fallback to default
 const nameMappingPath = path.join(__dirname, 'team-name-mapping.json');
-const nameMapping = fs.existsSync(nameMappingPath) 
-  ? require(nameMappingPath) 
-  : { mappings: {} };
+const projectMappingPath = path.join(__dirname, 'mappings', `${projectName}-mapping.json`);
+
+let nameMapping = { mappings: {} };
+
+// Try project-specific mapping first
+if (fs.existsSync(projectMappingPath)) {
+  console.log(`Using project-specific mapping: ${projectMappingPath}`);
+  nameMapping = require(projectMappingPath);
+} else if (fs.existsSync(nameMappingPath)) {
+  console.log(`Using default mapping: ${nameMappingPath}`);
+  nameMapping = require(nameMappingPath);
+} else {
+  console.log('No team name mapping found, using defaults');
+}
 
 class DatasourceGenerator {
   constructor() {

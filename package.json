@@ -42,9 +42,11 @@
     "engagepath:all": "cross-env CONFIG_FILE=config.engagepath.json npm run all",
 
     "use": "node run-with-config.js",
-    "datasource:generate": "node datasource-generator/generate_datasources.js",
     "datasource:from-existing": "node datasource-generator/generate_from_existing.js",
-    "datasource:all": "npm run datasource:generate"
+    "datasource:all": "node datasource-generator/generate_all_projects.js",
+    "datasource:rocks": "cross-env CONFIG_FILE=config/rocks.json node datasource-generator/generate_datasources.js",
+    "datasource:ai-coach": "cross-env CONFIG_FILE=config/ai-coach.json node datasource-generator/generate_datasources.js",
+    "datasource:engagepath": "cross-env CONFIG_FILE=config/engagepath.json node datasource-generator/generate_datasources.js"
   },
   "author": "",
   "license": "ISC",

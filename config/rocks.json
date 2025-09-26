@@ -1,0 +1,43 @@
+{
+  "projectName": "Rocks",
+  "dailyReports": {
+    "query": {
+      "client_project_id": 32,
+      "employee_id": [5, 2387, 3705, 10174, 2786, 100, 97, 7002, 5434, 12933],
+      "report_date_start": "2025-08-01",
+      "report_date_end": "2025-08-31"
+    }
+  },
+  "jira": {
+    "host": "fullscale.atlassian.net",
+    "project": "ROCKS",
+    "start_date": "2025-08-01",
+    "end_date": "2025-08-31",
+    "team_members": [
+      "Reynaldo Rama",
+      "Rangie Laurente",
+      "Allan Sheldon Ibañez",
+      "Junelito Salugsugan",
+      "Eusebio Mamac",
+      "Carmencito Berdon",
+      "Arneil Aro",
+      "Jan Leryc Ibalio",
+      "Ryan Sutana",
+      "Michael Roy Otilla"
+    ]
+  },
+  "transcripts": {
+    "folderId": "19csCguLvJ1RcVQUMo3KHW4geSzFbZdgV",
+    "serviceAccountKeyFile": "./service-account-key.json",
+    "downloadDir": "./transcripts/downloads",
+    "filePrefix": "fathom-transcript",
+    "sanitizeFilenames": true,
+    "dateFilter": {
+      "startDate": "2025-09-01",
+      "endDate": "2025-09-30",
+      "enabled": true
+    },
+    "convertToMarkdown": true,
+    "markdownOutputDir": "./transcripts/markdown-output"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "projectName": "EngagePath",
+  "dailyReports": {
+    "query": {
+      "client_project_id": 523,
+      "employee_id": [8368, 477, 11469, 21749],
+      "report_date_start": "2025-08-01",
+      "report_date_end": "2025-08-31"
+    }
+  },
+  "jira": {
+    "host": "fullscaleventures.atlassian.net",
+    "project": "CSMVP",
+    "start_date": "2025-08-01",
+    "end_date": "2025-08-31",
+    "team_members": [
+      "John_Micheal_Losito",
+      "Ismael_Cristal",
+      "Harvey_Aparece",
+      "Gerald_De_Los_Santos"
+    ]
+  },
+  "transcripts": {
+    "folderId": "19csCguLvJ1RcVQUMo3KHW4geSzFbZdgV",
+    "serviceAccountKeyFile": "./service-account-key.json",
+    "downloadDir": "./transcripts/downloads",
+    "filePrefix": "fathom-transcript",
+    "sanitizeFilenames": true,
+    "dateFilter": {
+      "startDate": "2025-09-01",
+      "endDate": "2025-09-30",
+      "enabled": true
+    },
+    "convertToMarkdown": true,
+    "markdownOutputDir": "./transcripts/markdown-output"
+  }
+}

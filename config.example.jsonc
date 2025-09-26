@@ -35,11 +35,20 @@
   
   // Configuration for downloading and processing Google Drive transcripts
   "transcripts": {
-    "folderId": "your-google-drive-folder-id",  // Google Drive folder ID (from the folder URL)
+    // Option 1: Multiple folders (recommended for teams with separate folders)
+    "folder_ids": [                             // Array of Google Drive folder IDs
+      "your-google-drive-folder-id-1",         // Main transcripts folder
+      "your-google-drive-folder-id-2"          // Additional folder (e.g., team-specific)
+    ],
+    
+    // Option 2: Single folder (backward compatible)
+    // "folderId": "your-google-drive-folder-id",  // Single Google Drive folder ID
+    
     "serviceAccountKeyFile": "./service-account-key.json",  // Path to Google service account JSON (now in main folder)
     "downloadDir": "./transcripts/downloads",    // Directory where files will be downloaded
     "filePrefix": "fathom-transcript",          // File prefix filter (empty string "" downloads all files)
     "sanitizeFilenames": true,                  // Replace special characters for cross-platform compatibility
+    "organizeByFolder": false,                  // When true, creates subdirectories for each folder
     
     // Date filter for transcript downloads
     "dateFilter": {

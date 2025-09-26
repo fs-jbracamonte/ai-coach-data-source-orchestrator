@@ -31,35 +31,76 @@ This script downloads files from a Google Drive folder using Service Account aut
 5. Click "Create" - this will download a JSON key file
 6. **Save this file as `service-account-key.json` in the main project folder (not in transcripts)**
 
-### 4. Share Your Google Drive Folder
+### 4. Share Your Google Drive Folder(s)
 
 1. Copy the service account email from the JSON file (look for the `client_email` field)
-2. Go to your Google Drive folder (ID: `1WgzH_coNUo2OVYbjRNnBL1qJ3UG8LtIH`)
-3. Right-click the folder and select "Share"
-4. Add the service account email address
-5. Give it "Viewer" permission
-6. Click "Send"
+2. For each Google Drive folder you want to access:
+   - Go to the folder in Google Drive
+   - Right-click the folder and select "Share"
+   - Add the service account email address
+   - Give it "Viewer" permission
+   - Click "Send"
+3. Note down the folder IDs from the URL (the long string after `/folders/` in the URL)
 
 ## Configuration
 
 Edit `config.json` to customize the download behavior:
 
+### Multiple Folders (Recommended)
+
 ```json
 {
-  "folderId": "1WgzH_coNUo2OVYbjRNnBL1qJ3UG8LtIH",
-  "serviceAccountKeyFile": "./service-account-key.json",  // Now in main folder
-  "downloadDir": "./downloads",
-  "filePrefix": "",  // Set to download only files starting with this prefix
-  "sanitizeFilenames": true,  // Clean special characters from filenames (recommended for Windows)
-  "dateFilter": {
-    "startDate": "",   // Format: "YYYY-MM-DD" (e.g., "2025-08-15")
-    "endDate": "",     // Format: "YYYY-MM-DD" (e.g., "2025-09-30")
-    "enabled": false   // Set to true to enable date filtering
-  },
-  "convertToMarkdown": false,  // Set to true to convert .txt transcripts to .md format
-  "markdownOutputDir": "./markdown-output"  // Directory for converted markdown files
+  "transcripts": {
+    "folder_ids": [
+      "1WgzH_coNUo2OVYbjRNnBL1qJ3UG8LtIH",  // Main transcripts folder
+      "1ABC123DEF456GHI789JKL012MNO345PQR",  // Team A folder
+      "2XYZ789UVW456RST123OPQ789LMN456IJK"   // Team B folder
+    ],
+    "serviceAccountKeyFile": "./service-account-key.json",
+    "downloadDir": "./transcripts/downloads",
+    "filePrefix": "",  // Set to download only files starting with this prefix
+    "sanitizeFilenames": true,  // Clean special characters from filenames
+    "organizeByFolder": true,  // Create subdirectories for each folder
+    "dateFilter": {
+      "startDate": "",   // Format: "YYYY-MM-DD" (e.g., "2025-08-15")
+      "endDate": "",     // Format: "YYYY-MM-DD" (e.g., "2025-09-30")
+      "enabled": false   // Set to true to enable date filtering
+    },
+    "convertToMarkdown": false,  // Set to true to convert .txt transcripts to .md format
+    "markdownOutputDir": "./transcripts/markdown-output"
+  }
 }
 ```
+
+### Single Folder (Backward Compatible)
+
+```json
+{
+  "transcripts": {
+    "folderId": "1WgzH_coNUo2OVYbjRNnBL1qJ3UG8LtIH",  // Single folder ID
+    "serviceAccountKeyFile": "./service-account-key.json",
+    "downloadDir": "./transcripts/downloads",
+    "filePrefix": "",
+    "sanitizeFilenames": true,
+    "dateFilter": {
+      "startDate": "",
+      "endDate": "",
+      "enabled": false
+    },
+    "convertToMarkdown": false,
+    "markdownOutputDir": "./transcripts/markdown-output"
+  }
+}
+```
+
+### Configuration Options
+
+- **folder_ids** (array) or **folderId** (string): Google Drive folder ID(s) to download from
+- **organizeByFolder** (boolean): When true and using multiple folders, creates subdirectories for each folder
+- **filePrefix**: Only download files starting with this prefix (empty string downloads all)
+- **sanitizeFilenames**: Clean special characters for cross-platform compatibility
+- **dateFilter**: Filter files by modification date range
+- **convertToMarkdown**: Automatically convert .txt transcripts to formatted .md files
 
 ## Usage
 
@@ -175,6 +216,31 @@ Their response or comment...
 ### Downloaded Files
 
 Files will be downloaded to: `transcripts/downloads/`
+
+When using multiple folders with `organizeByFolder: true`:
+- Files are organized into subdirectories named after their source folders
+- Example structure:
+  ```
+  transcripts/
+  ├── downloads/
+  │   ├── Main Transcripts/         # Files from folder 1
+  │   │   ├── fathom-transcript-meeting1.txt
+  │   │   └── fathom-transcript-meeting2.txt
+  │   ├── Team A Transcripts/       # Files from folder 2
+  │   │   └── fathom-transcript-standup.txt
+  │   └── Team B Transcripts/       # Files from folder 3
+  │       └── fathom-transcript-planning.txt
+  └── markdown-output/              # If convertToMarkdown is enabled
+      ├── Main Transcripts/
+      │   ├── fathom-transcript-meeting1.md
+      │   └── fathom-transcript-meeting2.md
+      ├── Team A Transcripts/
+      │   └── fathom-transcript-standup.md
+      └── Team B Transcripts/
+          └── fathom-transcript-planning.md
+  ```
+
+When `organizeByFolder: false`, all files are placed directly in the downloads directory regardless of their source folder.
 
 ## Troubleshooting
 

@@ -1,0 +1,46 @@
+{
+  // Example configuration for transcript processing with multiple folders
+  "transcripts": {
+    // You can use either "folder_ids" (array) for multiple folders
+    // or "folderId" (string) for a single folder (backward compatible)
+    "folder_ids": [
+      "19csCguLvJ1RcVQUMo3KHW4geSzFbZdgV",  // Main transcripts folder
+      "1ABC123DEF456GHI789JKL012MNO345PQR",  // Team A transcripts
+      "2XYZ789UVW456RST123OPQ789LMN456IJK"   // Team B transcripts
+    ],
+    
+    // Alternative: single folder ID (backward compatible)
+    // "folderId": "19csCguLvJ1RcVQUMo3KHW4geSzFbZdgV",
+    
+    // Service account key for Google Drive API authentication
+    "serviceAccountKeyFile": "./service-account-key.json",
+    
+    // Base directory for downloaded files
+    "downloadDir": "./transcripts/downloads",
+    
+    // Only download files with this prefix (optional)
+    "filePrefix": "fathom-transcript",
+    
+    // Sanitize filenames for cross-platform compatibility
+    "sanitizeFilenames": true,
+    
+    // Organize downloaded files by folder name (creates subdirectories)
+    // When true: ./downloads/FolderName/file.txt
+    // When false: ./downloads/file.txt
+    "organizeByFolder": true,
+    
+    // Filter files by modification date
+    "dateFilter": {
+      "startDate": "2025-09-15",
+      "endDate": "2025-09-24",
+      "enabled": true
+    },
+    
+    // Convert transcript files to markdown format
+    "convertToMarkdown": true,
+    
+    // Output directory for markdown files
+    // If organizeByFolder is true, creates subdirectories here too
+    "markdownOutputDir": "./transcripts/markdown-output"
+  }
+}

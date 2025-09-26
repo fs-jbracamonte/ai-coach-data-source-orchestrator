@@ -49,12 +49,23 @@ Simple script to export Jira issues to CSV using your JQL query.
 
 ## Usage
 
-### Run All Steps at Once
+### Generate Team Report (No splitting by assignee)
+```bash
+npm run jira:team-all
+```
+
+This runs: export → generate team report (all assignees in one report)
+
+Use this when you want a consolidated team view with all tickets in a single report.
+
+### Generate Individual Reports (Split by assignee)
 ```bash
 npm run jira:all
 ```
 
 This runs the complete pipeline: export → split → convert to markdown
+
+Use this when you want separate reports for each team member.
 
 ### Run Individual Steps
 
@@ -85,7 +96,7 @@ This will:
 - Create separate CSV files for each team member in `data/by-assignee/`
 - Skip any assignees not in the team_members list (or export all if empty)
 
-#### Convert to Markdown
+#### Convert to Markdown (Individual Reports)
 ```bash
 npm run jira:markdown
 # Or directly: node jira/csv-to-markdown.js
@@ -98,14 +109,34 @@ This will:
 - Parse complex JSON fields from the Jira export
 - Group tickets by status with proper formatting
 
+#### Generate Team Report
+```bash
+npm run jira:team-report
+# Or directly: node jira/team-report.js
+```
+
+This will:
+- Read the main exported CSV file from `data/`
+- Generate a consolidated team report with all tickets
+- Save the team report to `md_output/{project}_{date}_team_report.md`
+- Include executive summary with statistics by status, type, and assignee
+- Group tickets by status and team member
+
 ## Complete Workflow
 
-Option 1: Run all at once
+### Option 1: Team Report (Consolidated)
+```bash
+npm run jira:team-all
+```
+Creates a single team report with all tickets and statistics.
+
+### Option 2: Individual Reports
 ```bash
 npm run jira:all
 ```
+Creates separate reports for each team member.
 
-Option 2: Run step by step
+### Option 3: Run step by step for individual reports
 ```bash
 # Step 1: Export all Jira issues
 npm run jira:export
@@ -117,7 +148,18 @@ npm run jira:split
 npm run jira:markdown
 ```
 
-The final markdown reports will be in the `md_output/` folder, with one file per team member containing all their tickets organized by status.
+### Option 4: Run step by step for team report
+```bash
+# Step 1: Export all Jira issues
+npm run jira:export
+
+# Step 2: Generate team report
+npm run jira:team-report
+```
+
+The final markdown reports will be in the `md_output/` folder:
+- Team reports: `{project}_{date}_team_report.md`
+- Individual reports: One file per team member with their tickets organized by status
 
 ## Examples
 

@@ -4,6 +4,8 @@ const { spawn } = require('child_process');
 
 // Load configuration
 const config = require('../lib/config').load();
+const { FileSystemError, ValidationError, ConfigurationError } = require('../lib/errors');
+const { handleError } = require('../lib/error-handler');
 
 // Load team name mapping
 const nameMappingPath = path.join(__dirname, 'team-name-mapping.json');
@@ -301,8 +303,11 @@ class DatasourceGenerator {
       generatedFiles.forEach(f => console.log(`  - ${path.basename(f)}`));
       
     } catch (error) {
-      console.error('Error during generation:', error.message);
-      process.exit(1);
+      handleError(error, {
+        module: 'datasource-generator',
+        operation: 'generate-datasources',
+        configFile: process.env.CONFIG_FILE || 'config.json'
+      });
     }
   }
 }

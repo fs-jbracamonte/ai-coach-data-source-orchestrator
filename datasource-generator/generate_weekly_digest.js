@@ -4,6 +4,7 @@ const { spawn } = require('child_process');
 
 // Load configuration
 const config = require('../lib/config').load();
+const { handleError } = require('../lib/error-handler');
 
 // Load team name mapping
 const nameMappingPath = path.join(__dirname, 'team-name-mapping.json');
@@ -416,8 +417,11 @@ def get_employee_reports(employee_name):
 
       console.log('\n✓ Weekly digest generation completed successfully!');
     } catch (error) {
-      console.error('\n✗ Weekly digest generation failed:', error.message);
-      process.exit(1);
+      handleError(error, {
+        module: 'datasource-generator',
+        operation: 'generate-weekly-digest',
+        configFile: process.env.CONFIG_FILE || 'config.json'
+      });
     }
   }
 }

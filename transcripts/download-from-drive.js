@@ -5,6 +5,8 @@ const transcriptToMarkdown = require('./transcript-to-markdown');
 
 // Load configuration
 const config = require('../lib/config').load();
+const { GoogleDriveError, FileSystemError, ConfigurationError } = require('../lib/errors');
+const { handleError } = require('../lib/error-handler');
 
 // Configuration from config.json
 // Support both single folderId (backward compatible) and array of folder_ids
@@ -91,6 +93,20 @@ async function convertTranscriptToMarkdown(txtFilePath, filename, outputDir) {
 // Initialize the Google Drive API
 async function initializeDrive() {
   try {
+    // Check if service account key file exists
+    if (!fs.existsSync(path.resolve(SERVICE_ACCOUNT_KEY_FILE))) {
+      throw new FileSystemError('Service account key file not found', {
+        operation: 'read',
+        path: SERVICE_ACCOUNT_KEY_FILE,
+        resolutionSteps: [
+          'Verify config.transcripts.serviceAccountKeyFile path is correct',
+          'Ensure service-account-key.json exists in the project root',
+          'Download the key file from Google Cloud Console',
+          'See SETUP_GOOGLE_DRIVE.md for setup instructions'
+        ]
+      });
+    }
+
     // Load service account credentials
     const auth = new google.auth.GoogleAuth({
       keyFile: path.resolve(SERVICE_ACCOUNT_KEY_FILE),
@@ -100,8 +116,19 @@ async function initializeDrive() {
     const authClient = await auth.getClient();
     return google.drive({ version: 'v3', auth: authClient });
   } catch (error) {
-    console.error('Error initializing Google Drive API:', error.message);
-    throw error;
+    if (error instanceof FileSystemError) {
+      throw error;
+    }
+    throw new GoogleDriveError(`Error initializing Google Drive API: ${error.message}`, {
+      serviceAccountKeyFile: SERVICE_ACCOUNT_KEY_FILE,
+      originalError: error.message,
+      resolutionSteps: [
+        'Verify service-account-key.json is valid JSON',
+        'Ensure the service account has Google Drive API enabled',
+        'Check that credentials are not expired',
+        'See SETUP_GOOGLE_DRIVE.md for setup instructions'
+      ]
+    });
   }
 }
 
@@ -116,8 +143,12 @@ async function listFilesInFolder(drive, folderId) {
 
     return res.data.files;
   } catch (error) {
-    console.error('Error listing files:', error.message);
-    throw error;
+    const statusCode = error.response?.status || error.code;
+    throw new GoogleDriveError(`Error listing files in folder: ${error.message}`, {
+      statusCode,
+      folderId,
+      originalError: error.message
+    });
   }
 }
 
@@ -139,13 +170,23 @@ async function downloadFile(drive, fileId, fileName, downloadPath) {
         })
         .on('error', err => {
           console.error(`✗ Error downloading ${fileName}:`, err.message);
-          reject(err);
+          reject(new GoogleDriveError(`Download stream error: ${err.message}`, {
+            fileId,
+            fileName,
+            downloadPath
+          }));
         })
         .pipe(dest);
     });
   } catch (error) {
-    console.error(`Error downloading file ${fileName}:`, error.message);
-    throw error;
+    const statusCode = error.response?.status || error.code;
+    throw new GoogleDriveError(`Error downloading file ${fileName}: ${error.message}`, {
+      statusCode,
+      fileId,
+      fileName,
+      downloadPath,
+      originalError: error.message
+    });
   }
 }
 
@@ -159,7 +200,9 @@ async function getFolderName(drive, folderId) {
     return res.data.name;
   } catch (error) {
     console.error(`Error getting folder name for ${folderId}:`, error.message);
-    return folderId; // Fallback to folder ID if name retrieval fails
+    // Fallback to folder ID if name retrieval fails
+    // This is not critical, so we just log and continue
+    return folderId;
   }
 }
 
@@ -305,9 +348,15 @@ async function main() {
 
     // Validate configuration
     if (!FOLDER_IDS || FOLDER_IDS.length === 0) {
-      console.error('Error: No folder IDs specified in configuration.');
-      console.error('Please add either "folderId" (single) or "folder_ids" (array) to the transcripts section.');
-      process.exit(1);
+      throw new ConfigurationError('No Google Drive folder IDs specified in configuration', {
+        field: 'transcripts.folder_ids or transcripts.folderId',
+        resolutionSteps: [
+          'Add "folder_ids" array to the transcripts section in your config file',
+          'Or add "folderId" (single folder, backward compatible)',
+          'Get folder IDs from Google Drive folder URLs',
+          'See config.example.jsonc for reference'
+        ]
+      });
     }
 
     // Download files based on configuration
@@ -331,8 +380,11 @@ async function main() {
     await downloadFilesWithPrefix(drive, FOLDER_IDS, FILE_PREFIX);
 
   } catch (error) {
-    console.error('Script failed:', error.message);
-    process.exit(1);
+    handleError(error, {
+      module: 'transcripts',
+      operation: 'download-from-drive',
+      configFile: process.env.CONFIG_FILE || 'config.json'
+    });
   }
 }
 

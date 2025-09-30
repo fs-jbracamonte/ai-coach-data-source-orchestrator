@@ -8,6 +8,8 @@ require('dotenv').config();
 
 // Load configuration
 const config = require('../lib/config').load();
+const { DatabaseConnectionError, FileSystemError } = require('../lib/errors');
+const { handleError } = require('../lib/error-handler');
 
 class DatabaseConnection {
   constructor() {
@@ -56,7 +58,18 @@ class DatabaseConnection {
       });
 
       sshClient.on('error', (err) => {
-        reject(new Error(`SSH connection error: ${err.message}`));
+        reject(new DatabaseConnectionError(`SSH connection error: ${err.message}`, {
+          host: process.env.SSH_HOST,
+          port: process.env.SSH_PORT,
+          username: process.env.SSH_USERNAME,
+          resolutionSteps: [
+            'Verify SSH credentials in .env file',
+            'Check that SSH_HOST and SSH_PORT are correct',
+            'Ensure the remote host is accessible',
+            'Verify your SSH username is correct',
+            'Check firewall settings'
+          ]
+        }));
       });
 
       // Read the private key
@@ -64,7 +77,16 @@ class DatabaseConnection {
       try {
         privateKey = fs.readFileSync(path.resolve(process.env.SSH_PRIVATE_KEY_PATH));
       } catch (err) {
-        reject(new Error(`Failed to read private key: ${err.message}`));
+        reject(new FileSystemError(`Failed to read private key: ${err.message}`, {
+          operation: 'read',
+          path: process.env.SSH_PRIVATE_KEY_PATH,
+          resolutionSteps: [
+            'Verify SSH_PRIVATE_KEY_PATH in .env file is correct',
+            'Check that the private key file exists',
+            'Ensure you have read permissions for the key file',
+            'Verify the path is absolute or relative to project root'
+          ]
+        }));
         return;
       }
 
@@ -94,7 +116,19 @@ class DatabaseConnection {
       console.log('Connected to MariaDB database');
       return this.dbConnection;
     } catch (err) {
-      throw new Error(`Database connection error: ${err.message}`);
+      throw new DatabaseConnectionError(`Database connection error: ${err.message}`, {
+        host: '127.0.0.1',
+        port: localPort,
+        user: process.env.DB_USER,
+        database: process.env.DB_DATABASE,
+        resolutionSteps: [
+          'Verify database credentials in .env file (DB_USER, DB_PASSWORD, DB_DATABASE)',
+          'Ensure the SSH tunnel is established',
+          'Check that the remote database is running',
+          'Verify database host and port in .env',
+          'Check database user permissions'
+        ]
+      });
     }
   }
 
@@ -115,14 +149,29 @@ class DatabaseConnection {
 
   async executeQuery(query, params = []) {
     if (!this.dbConnection) {
-      throw new Error('Database connection not established');
+      throw new DatabaseConnectionError('Database connection not established', {
+        resolutionSteps: [
+          'Ensure connect() is called before executing queries',
+          'Check that the SSH tunnel is active',
+          'Verify database credentials'
+        ]
+      });
     }
     
     try {
       const [results, fields] = await this.dbConnection.execute(query, params);
       return { results, fields };
     } catch (err) {
-      throw new Error(`Query execution error: ${err.message}`);
+      throw new DatabaseConnectionError(`Query execution error: ${err.message}`, {
+        query: query.substring(0, 200) + '...', // First 200 chars
+        params: params.length,
+        resolutionSteps: [
+          'Check SQL query syntax',
+          'Verify table and column names',
+          'Ensure query parameters match placeholders',
+          'Check database user permissions for the query'
+        ]
+      });
     }
   }
 
@@ -301,7 +350,11 @@ async function main() {
     }
     
   } catch (err) {
-    console.error('Error:', err.message);
+    handleError(err, {
+      module: 'daily-reports',
+      operation: 'db-query',
+      configFile: process.env.CONFIG_FILE || 'config.json'
+    });
   } finally {
     // Always close the connection
     await db.close();
@@ -310,7 +363,13 @@ async function main() {
 
 // Run if this file is executed directly
 if (require.main === module) {
-  main().catch(console.error);
+  main().catch(err => {
+    handleError(err, {
+      module: 'daily-reports',
+      operation: 'db-query',
+      configFile: process.env.CONFIG_FILE || 'config.json'
+    });
+  });
 }
 
 // Export for use in other scripts

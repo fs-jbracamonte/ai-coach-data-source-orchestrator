@@ -5,6 +5,8 @@ require('dotenv').config();
 
 // Load config
 const config = require('../lib/config').load();
+const { JiraAPIError, ConfigurationError, FileSystemError } = require('../lib/errors');
+const { handleError } = require('../lib/error-handler');
 
 // Function to make Jira API request
 function makeJiraRequest(path, callback) {
@@ -39,13 +41,28 @@ function makeJiraRequest(path, callback) {
       } else {
         console.error(`Error: ${res.statusCode} ${res.statusMessage}`);
         console.error('Response:', data);
-        callback(new Error(`HTTP ${res.statusCode}: ${data}`));
+        callback(new JiraAPIError(`HTTP ${res.statusCode}: ${res.statusMessage}`, {
+          statusCode: res.statusCode,
+          host: options.hostname,
+          path: options.path,
+          response: data.substring(0, 500) // First 500 chars of response
+        }));
       }
     });
   });
 
   req.on('error', (error) => {
-    callback(error);
+    callback(new JiraAPIError(`Network error: ${error.message}`, {
+      host: options.hostname,
+      path: options.path,
+      originalError: error.message,
+      resolutionSteps: [
+        'Check your internet connection',
+        'Verify the Jira host is accessible',
+        'Check for firewall or proxy restrictions',
+        'Ensure the Jira instance URL is correct'
+      ]
+    }));
   });
 
   req.end();
@@ -54,16 +71,28 @@ function makeJiraRequest(path, callback) {
 async function exportJiraData() {
   // Check environment variables (remove JIRA_HOST check)
   if (!process.env.JIRA_EMAIL || !process.env.JIRA_API_TOKEN) {
-    console.error('Missing required environment variables!');
-    console.error('Please set JIRA_EMAIL and JIRA_API_TOKEN in your .env file');
-    process.exit(1);
+    throw new ConfigurationError('Missing required environment variables', {
+      missing: ['JIRA_EMAIL', 'JIRA_API_TOKEN'].filter(v => !process.env[v]),
+      resolutionSteps: [
+        'Set JIRA_EMAIL in your .env file',
+        'Set JIRA_API_TOKEN in your .env file',
+        'Generate an API token at: https://id.atlassian.com/manage-profile/security/api-tokens',
+        'Copy example.env to .env if you haven\'t already'
+      ]
+    });
   }
 
   // Check if jira.host is configured
   if (!config.jira.host) {
-    console.error('Error: No host specified in config.json');
-    console.error('Please add a "host" field under "jira" with your Jira instance domain');
-    process.exit(1);
+    throw new ConfigurationError('No Jira host specified in configuration', {
+      field: 'jira.host',
+      resolutionSteps: [
+        'Add a "host" field under "jira" in your config file',
+        'Use domain only (e.g., "company.atlassian.net")',
+        'Do not include protocol (http:// or https://)',
+        'See config.example.jsonc for reference'
+      ]
+    });
   }
 
   console.log('Connecting to Jira:');
@@ -73,9 +102,15 @@ async function exportJiraData() {
 
   // Check if project is configured
   if (!config.jira.project) {
-    console.error('Error: No project specified in config.json');
-    console.error('Please add a "project" field with your Jira project key (e.g., "AICD", "PROJ", etc.)');
-    process.exit(1);
+    throw new ConfigurationError('No Jira project specified in configuration', {
+      field: 'jira.project',
+      resolutionSteps: [
+        'Add a "project" field under "jira" in your config file',
+        'Use the project key (e.g., "AICD", "PROJ", not the full name)',
+        'Find the project key in Jira project settings',
+        'See config.example.jsonc for reference'
+      ]
+    });
   }
 
   // Build JQL query
@@ -106,8 +141,7 @@ async function exportJiraData() {
         }
       });
     }).catch(error => {
-      console.error('Failed to fetch issues:', error.message);
-      process.exit(1);
+      throw error; // Will be caught by outer catch block
     });
 
     startAt += maxResults;
@@ -180,4 +214,14 @@ async function exportJiraData() {
 }
 
 // Run the export
-exportJiraData();
+if (require.main === module) {
+  exportJiraData().catch(err => {
+    handleError(err, {
+      module: 'jira',
+      operation: 'export-to-csv',
+      configFile: process.env.CONFIG_FILE || 'config.json'
+    });
+  });
+}
+
+module.exports = exportJiraData;

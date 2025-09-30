@@ -4,6 +4,7 @@ const { spawn } = require('child_process');
 
 // Load configuration
 const config = require('../lib/config').load();
+const { handleError } = require('../lib/error-handler');
 
 // Load team name mapping
 const nameMappingPath = path.join(__dirname, 'team-name-mapping.json');
@@ -256,8 +257,11 @@ def search_content(keyword, data_type="all"):
 
       console.log('\n✓ Team datasource generation completed successfully!');
     } catch (error) {
-      console.error('\n✗ Team datasource generation failed:', error.message);
-      process.exit(1);
+      handleError(error, {
+        module: 'datasource-generator',
+        operation: 'generate-team-datasource',
+        configFile: process.env.CONFIG_FILE || 'config.json'
+      });
     }
   }
 }

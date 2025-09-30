@@ -22,19 +22,16 @@
     "datasource:clean": "node datasource-generator/clean.js",
     "clean:all": "npm run daily:clean && npm run jira:clean && npm run transcripts:clean && npm run datasource:clean",
     "all": "npm run jira:all && npm run transcripts:download && npm run daily:all",
-
     "project1:daily": "cross-env CONFIG_FILE=config.project1.json npm run daily:all",
     "project1:jira": "cross-env CONFIG_FILE=config.project1.json npm run jira:all",
     "project1:jira-team": "cross-env CONFIG_FILE=config.project1.json npm run jira:team-all",
     "project1:transcripts": "cross-env CONFIG_FILE=config.project1.json npm run transcripts:download",
     "project1:all": "cross-env CONFIG_FILE=config.project1.json npm run all",
-
     "project2:daily": "cross-env CONFIG_FILE=config.project2.json npm run daily:all",
     "project2:jira": "cross-env CONFIG_FILE=config.project2.json npm run jira:all",
     "project2:jira-team": "cross-env CONFIG_FILE=config.project2.json npm run jira:team-all",
     "project2:transcripts": "cross-env CONFIG_FILE=config.project2.json npm run transcripts:download",
     "project2:all": "cross-env CONFIG_FILE=config.project2.json npm run all",
-
     "rocks:daily": "cross-env CONFIG_FILE=config.rocks.json npm run daily:all",
     "rocks:jira": "cross-env CONFIG_FILE=config.rocks.json npm run jira:all",
     "rocks:jira-team": "cross-env CONFIG_FILE=config.rocks.json npm run jira:team-all",
@@ -42,13 +39,11 @@
     "rocks:datasource-team": "cross-env CONFIG_FILE=config.rocks.json npm run datasource:team",
     "rocks:datasource-weekly": "cross-env CONFIG_FILE=config.rocks.json npm run datasource:weekly-digest",
     "rocks:all": "cross-env CONFIG_FILE=config.rocks.json npm run all",
-
     "engagepath:daily": "cross-env CONFIG_FILE=config.engagepath.json npm run daily:all",
     "engagepath:jira": "cross-env CONFIG_FILE=config.engagepath.json npm run jira:all",
     "engagepath:jira-team": "cross-env CONFIG_FILE=config.engagepath.json npm run jira:team-all",
     "engagepath:transcripts": "cross-env CONFIG_FILE=config.engagepath.json npm run transcripts:download",
     "engagepath:all": "cross-env CONFIG_FILE=config.engagepath.json npm run all",
-
     "use": "node run-with-config.js",
     "datasource:generate": "node datasource-generator/generate_datasources.js",
     "datasource:from-existing": "node datasource-generator/generate_from_existing.js",
@@ -63,6 +58,7 @@
     "csv-writer": "^1.6.0",
     "dotenv": "^17.2.2",
     "googleapis": "^160.0.0",
+    "joi": "^18.0.1",
     "mysql2": "^3.11.0",
     "ssh2": "^1.15.0"
   },

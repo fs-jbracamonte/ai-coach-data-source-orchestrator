@@ -4,10 +4,7 @@ const path = require('path');
 const transcriptToMarkdown = require('./transcript-to-markdown');
 
 // Load configuration
-const configFile = process.env.CONFIG_FILE || 'config.json';
-const configPath = path.resolve(process.cwd(), configFile);
-console.log(`Using config file: ${configPath}`);
-const config = require(configPath);
+const config = require('../lib/config').load();
 
 // Configuration from config.json
 // Support both single folderId (backward compatible) and array of folder_ids

@@ -40,6 +40,7 @@
     "rocks:jira-team": "cross-env CONFIG_FILE=config.rocks.json npm run jira:team-all",
     "rocks:transcripts": "cross-env CONFIG_FILE=config.rocks.json npm run transcripts:download",
     "rocks:datasource-team": "cross-env CONFIG_FILE=config.rocks.json npm run datasource:team",
+    "rocks:datasource-weekly": "cross-env CONFIG_FILE=config.rocks.json npm run datasource:weekly-digest",
     "rocks:all": "cross-env CONFIG_FILE=config.rocks.json npm run all",
 
     "engagepath:daily": "cross-env CONFIG_FILE=config.engagepath.json npm run daily:all",
@@ -52,6 +53,7 @@
     "datasource:generate": "node datasource-generator/generate_datasources.js",
     "datasource:from-existing": "node datasource-generator/generate_from_existing.js",
     "datasource:team": "node datasource-generator/generate_team_datasource.js",
+    "datasource:weekly-digest": "node datasource-generator/generate_weekly_digest.js",
     "datasource:all": "npm run datasource:generate"
   },
   "author": "",

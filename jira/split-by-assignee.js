@@ -5,10 +5,7 @@ const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 require('dotenv').config();
 
 // Load config
-const configFile = process.env.CONFIG_FILE || 'config.json';
-const configPath = path.resolve(process.cwd(), configFile);
-console.log(`Using config file: ${configPath}`);
-const config = require(configPath);
+const config = require('../lib/config').load();
 
 async function splitCsvByAssignee() {
   // Check if project is configured

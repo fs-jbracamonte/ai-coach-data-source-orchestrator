@@ -2,10 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
-// Get config file path from environment or use default
-const configPath = path.resolve(process.env.CONFIG_FILE || './config.json');
-console.log(`Using config file: ${configPath}`);
-const config = require(configPath);
+// Load configuration
+const config = require('../lib/config').load();
 
 // Load team name mapping
 const nameMappingPath = path.join(__dirname, 'team-name-mapping.json');

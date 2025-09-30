@@ -2,6 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const DatasourceGenerator = require('./generate_datasources');
 
+// Load configuration
+const config = require('../lib/config').load();
+
 // Load team name mapping for project folder info
 const nameMappingPath = path.join(__dirname, 'team-name-mapping.json');
 const nameMapping = fs.existsSync(nameMappingPath) 
@@ -15,11 +18,6 @@ const nameMapping = fs.existsSync(nameMappingPath)
  */
 async function generateFromExisting() {
   const generator = new DatasourceGenerator();
-  
-  // Get config
-  const configPath = path.resolve(process.env.CONFIG_FILE || './config.json');
-  console.log(`Using config file: ${configPath}`);
-  const config = require(configPath);
   
   const teamMembers = config.jira.team_members || [];
   

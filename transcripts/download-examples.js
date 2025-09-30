@@ -1,9 +1,8 @@
 const { initializeDrive, downloadFilesWithPrefix } = require('./download-from-drive');
 const path = require('path');
-const configFile = process.env.CONFIG_FILE || 'config.json';
-const configPath = path.resolve(process.cwd(), configFile);
-console.log(`Using config file: ${configPath}`);
-const config = require(configPath);
+
+// Load config
+const config = require('../lib/config').load();
 
 async function runExamples() {
   try {

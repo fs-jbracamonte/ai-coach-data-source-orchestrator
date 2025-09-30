@@ -58,6 +58,23 @@ For project-specific team datasources:
 npm run rocks:datasource-team
 ```
 
+### Generate Weekly Digest Datasource
+
+This command generates a comprehensive weekly digest that includes daily reports:
+1. Runs `daily:all` to generate daily reports for configured employee IDs
+2. Runs `jira:all` to generate individual JIRA reports for configured team members (excludes unassigned tickets)
+3. Downloads all transcripts from configured folders
+4. Combines all three data sources into a single `datasource_weekly_<project>.py` file
+
+```bash
+npm run datasource:weekly-digest
+```
+
+For project-specific weekly digests:
+```bash
+npm run rocks:datasource-weekly
+```
+
 ### Generate from Existing Data
 
 If you already have the markdown files generated, you can create datasource files without re-running all queries:
@@ -106,21 +123,38 @@ Each team file contains:
 - `TRANSCRIPT_DATA` - All meeting transcripts from configured folders
 - Helper functions for searching and analyzing the data
 
+### Weekly Digest Datasource
+
+The weekly digest file will be placed in `datasource-generator/output/`:
+- `output/datasource_weekly_rocks.py` - For ROCKS project
+- `output/datasource_weekly_aicd.py` - For AI Coach project
+- etc.
+
+Each weekly digest file contains:
+- `JIRA_DATA` - Individual JIRA reports for configured team members only (unassigned tickets excluded)
+- `DAILY_REPORTS_DATA` - Concatenated daily reports for all configured employees
+- `TRANSCRIPT_DATA` - All meeting transcripts from configured folders
+- Helper functions for searching content and extracting summaries
+- Additional helper functions specific to daily reports and JIRA analysis
+
 ## File Structure
 
 ```
 datasource-generator/
-├── generate_datasources.js      # Main generation script for individual datasources
-├── generate_from_existing.js    # Generate from existing markdown
-├── generate_team_datasource.js  # Generate team-level datasource
-├── team-name-mapping.json       # Project folder and name mappings
-├── README.md                    # This file
-├── output/                      # Generated Python files
-│   ├── datasource_rocks_team.py    # Team-level datasource
-│   ├── datasource_aicd_team.py     # Team-level datasource
-│   └── ai-coach/                   # Project folder (configured in team-name-mapping.json)
-│       ├── datasource_jam.py       # Individual datasource
-│       ├── datasource_mark.py      # Individual datasource
+├── generate_datasources.js       # Main generation script for individual datasources
+├── generate_from_existing.js     # Generate from existing markdown
+├── generate_team_datasource.js   # Generate team-level datasource
+├── generate_weekly_digest.js     # Generate weekly digest with daily reports
+├── team-name-mapping.json        # Project folder and name mappings
+├── README.md                     # This file
+├── output/                       # Generated Python files
+│   ├── datasource_rocks_team.py     # Team-level datasource
+│   ├── datasource_weekly_rocks.py   # Weekly digest datasource
+│   ├── datasource_aicd_team.py      # Team-level datasource
+│   ├── datasource_weekly_aicd.py    # Weekly digest datasource
+│   └── ai-coach/                    # Project folder (configured in team-name-mapping.json)
+│       ├── datasource_jam.py        # Individual datasource
+│       ├── datasource_mark.py       # Individual datasource
 │       └── ...
 └── templates/
     ├── datasource_template.py       # Individual datasource template

@@ -65,6 +65,9 @@ desktop.ini
 *.sublime-project
 *.sublime-workspace
 
+# GitHub workflow and configuration files
+.github/
+
 # Test coverage
 coverage/
 .nyc_output/

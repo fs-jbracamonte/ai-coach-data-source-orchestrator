@@ -4,10 +4,7 @@ const csv = require('csv-parser');
 require('dotenv').config();
 
 // Load config
-const configFile = process.env.CONFIG_FILE || 'config.json';
-const configPath = path.resolve(process.cwd(), configFile);
-console.log(`Using config file: ${configPath}`);
-const config = require(configPath);
+const config = require('../lib/config').load();
 
 /**
  * Parse complex JSON fields from Jira export

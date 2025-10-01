@@ -5,12 +5,10 @@ const { spawn } = require('child_process');
 // Load configuration
 const config = require('../lib/config').load();
 const { handleError } = require('../lib/error-handler');
+const { loadTeamMapping } = require('./lib/mapping-resolver');
 
-// Load team name mapping
-const nameMappingPath = path.join(__dirname, 'team-name-mapping.json');
-const nameMapping = fs.existsSync(nameMappingPath) 
-  ? require(nameMappingPath) 
-  : { projectFolder: 'default', mappings: {} };
+// Load team name mapping using shared resolver
+const nameMapping = loadTeamMapping(config, __dirname);
 
 class WeeklyDigestGenerator {
   constructor() {

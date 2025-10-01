@@ -28,9 +28,9 @@ const {
   FileSystemError,
   ValidationError,
   NetworkError
-} = require('./lib/errors');
+} = require('../lib/errors');
 
-const { handleError } = require('./lib/error-handler');
+const { handleError } = require('../lib/error-handler');
 
 // Test scenarios
 const testScenarios = {

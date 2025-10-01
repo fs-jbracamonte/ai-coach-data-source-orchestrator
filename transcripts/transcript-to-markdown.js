@@ -1,13 +1,16 @@
+const fs = require('fs');
 const path = require('path');
+const { FileSystemError } = require('../lib/errors');
 
 class TranscriptToMarkdown {
   /**
    * Converts transcript text content to markdown format
    * @param {string} content - The raw transcript text
    * @param {string} filename - The filename (used to extract date)
+   * @param {Array<string>} [participants=null] - Optional array of participant names to display
    * @returns {string} Formatted markdown
    */
-  convertToMarkdown(content, filename = '') {
+  convertToMarkdown(content, filename = '', participants = null) {
     if (!content || content.trim() === '') {
       return '# Transcript\n\nNo transcript data available.';
     }
@@ -16,6 +19,15 @@ class TranscriptToMarkdown {
     const date = this.extractDateFromFilename(filename);
 
     let markdown = `# ${date}\n\n`;
+
+    // Add participants section if provided
+    if (participants && Array.isArray(participants) && participants.length > 0) {
+      markdown += `## Meeting Participants\n\n`;
+      for (const participant of participants) {
+        markdown += `- ${participant}\n`;
+      }
+      markdown += `\n`;
+    }
 
     // Process the transcript text
     const processedContent = this.processTranscriptText(content);
@@ -26,6 +38,47 @@ class TranscriptToMarkdown {
     markdown += `*Transcript processed on ${new Date().toLocaleString()}*\n`;
 
     return markdown;
+  }
+
+  /**
+   * Converts transcript text content to markdown format with automatically extracted participants
+   * @param {string} content - The raw transcript text
+   * @param {string} filename - The filename (used to extract date)
+   * @returns {string} Formatted markdown with participant list
+   */
+  convertToMarkdownWithParticipants(content, filename = '') {
+    const participants = this.extractParticipants(content);
+    return this.convertToMarkdown(content, filename, participants);
+  }
+
+  /**
+   * Extracts unique participant names from transcript content
+   * @param {string} content - The raw transcript text
+   * @returns {Array<string>} Array of unique participant names (preserves original casing)
+   */
+  extractParticipants(content) {
+    if (!content || content.trim() === '') {
+      return [];
+    }
+
+    const lines = content.split('\n');
+    const speakers = new Set();
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine) continue;
+
+      // Try to detect if this line is a transcript entry
+      const transcriptMatch = this.detectTranscriptLine(trimmedLine);
+
+      if (transcriptMatch && transcriptMatch.speaker) {
+        // Add speaker to set (preserves original casing)
+        speakers.add(transcriptMatch.speaker);
+      }
+    }
+
+    // Convert Set to sorted array
+    return Array.from(speakers).sort();
   }
 
   /**
@@ -303,4 +356,85 @@ class TranscriptToMarkdown {
   }
 }
 
-module.exports = new TranscriptToMarkdown();
+/**
+ * Standalone helper function to extract participants from a transcript file
+ * Useful for filtering transcripts before full conversion
+ * 
+ * @param {string} filePath - Path to the transcript file (.txt)
+ * @returns {Array<string>} Array of unique participant names
+ * @throws {FileSystemError} If file cannot be read
+ * 
+ * @example
+ * const participants = extractParticipantsFromFile('./transcript.txt');
+ * // Returns: ["Alice", "Bob", "Charlie"]
+ */
+function extractParticipantsFromFile(filePath) {
+  if (!filePath) {
+    throw new FileSystemError(
+      'File path is required for participant extraction',
+      {
+        operation: 'read',
+        resolutionSteps: [
+          'Provide a valid file path to the transcript file',
+          'Example: extractParticipantsFromFile("./transcripts/meeting.txt")'
+        ]
+      }
+    );
+  }
+
+  // Resolve the file path
+  const resolvedPath = path.resolve(filePath);
+
+  // Check if file exists
+  if (!fs.existsSync(resolvedPath)) {
+    throw new FileSystemError(
+      `Transcript file not found: ${filePath}`,
+      {
+        operation: 'read',
+        filePath: resolvedPath,
+        resolutionSteps: [
+          'Check that the file path is correct',
+          'Verify the file exists at the specified location',
+          'Ensure the file has not been moved or deleted'
+        ]
+      }
+    );
+  }
+
+  try {
+    // Read the file content
+    const content = fs.readFileSync(resolvedPath, 'utf8');
+    
+    // Use the TranscriptToMarkdown instance to extract participants
+    const transcriptConverter = new TranscriptToMarkdown();
+    return transcriptConverter.extractParticipants(content);
+  } catch (error) {
+    // If it's already a FileSystemError, re-throw it
+    if (error instanceof FileSystemError) {
+      throw error;
+    }
+
+    // Wrap other errors in FileSystemError
+    throw new FileSystemError(
+      `Failed to read or parse transcript file: ${filePath}`,
+      {
+        operation: 'read',
+        filePath: resolvedPath,
+        originalError: error.message,
+        resolutionSteps: [
+          'Check file permissions (file must be readable)',
+          'Verify the file is a valid text file',
+          'Ensure the file is not corrupted',
+          'Check that the file contains valid transcript format'
+        ]
+      }
+    );
+  }
+}
+
+// Export both the TranscriptToMarkdown instance and the helper function
+const transcriptToMarkdown = new TranscriptToMarkdown();
+
+module.exports = transcriptToMarkdown;
+module.exports.extractParticipantsFromFile = extractParticipantsFromFile;
+module.exports.TranscriptToMarkdown = TranscriptToMarkdown;

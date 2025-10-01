@@ -261,6 +261,46 @@ const configSchema = Joi.object({
         'string.base': 'markdownOutputDir must be a string (directory path)',
         'string.empty': 'markdownOutputDir is required when convertToMarkdown is true',
         'any.required': 'transcripts.markdownOutputDir is required when convertToMarkdown is true\n  Example: "markdownOutputDir": "./transcripts/markdown-output"'
+      }),
+    
+    // Team member filtering configuration
+    teamMembers: Joi.array()
+      .items(Joi.string().min(1))
+      .optional()
+      .messages({
+        'array.base': 'teamMembers must be an array of strings',
+        'string.min': 'Team member names cannot be empty strings',
+        'string.base': 'Each team member must be a string (full name)'
+      }),
+    
+    filterByTeamMembers: Joi.boolean()
+      .default(false)
+      .messages({
+        'boolean.base': 'filterByTeamMembers must be a boolean (true/false)'
+      }),
+    
+    minimumTeamMembersRequired: Joi.number()
+      .integer()
+      .min(1)
+      .default(1)
+      .messages({
+        'number.base': 'minimumTeamMembersRequired must be a number',
+        'number.integer': 'minimumTeamMembersRequired must be an integer',
+        'number.min': 'minimumTeamMembersRequired must be at least 1'
+      }),
+    
+    teamMappingFile: Joi.string()
+      .default('team-name-mapping.json')
+      .messages({
+        'string.base': 'teamMappingFile must be a string (file path)'
+      }),
+    
+    multiProjectFolders: Joi.array()
+      .items(folderIdSchema)
+      .optional()
+      .messages({
+        'array.base': 'multiProjectFolders must be an array of Google Drive folder IDs',
+        'string.pattern.base': 'Each folder ID in multiProjectFolders must be a valid Google Drive folder ID (20-50 characters)'
       })
   })
     .optional()
@@ -271,6 +311,37 @@ const configSchema = Joi.object({
           message: 'transcripts must have either "folder_ids" (array) or "folderId" (string/array)\n  Example: "folder_ids": ["1BY06tq2GJ17mRr6-gTbRHscrdtWWmC_9"]'
         });
       }
+      
+      // Validate team member filtering consistency
+      if (value && value.filterByTeamMembers === true) {
+        if (!value.teamMembers || value.teamMembers.length === 0) {
+          return helpers.error('any.invalid', {
+            message: 'When filterByTeamMembers is true, teamMembers array must be provided and not empty\n  Example: "teamMembers": ["John Doe", "Jane Smith"]'
+          });
+        }
+        
+        // Validate minimumTeamMembersRequired doesn't exceed teamMembers length
+        const minRequired = value.minimumTeamMembersRequired || 1;
+        if (minRequired > value.teamMembers.length) {
+          return helpers.error('any.invalid', {
+            message: `minimumTeamMembersRequired (${minRequired}) cannot exceed the number of teamMembers (${value.teamMembers.length})\n  Either reduce minimumTeamMembersRequired or add more team members`
+          });
+        }
+      }
+      
+      // Validate multiProjectFolders are subset of folder_ids
+      if (value && value.multiProjectFolders && value.multiProjectFolders.length > 0) {
+        const allFolderIds = value.folder_ids || (value.folderId ? (Array.isArray(value.folderId) ? value.folderId : [value.folderId]) : []);
+        
+        for (const multiProjFolder of value.multiProjectFolders) {
+          if (!allFolderIds.includes(multiProjFolder)) {
+            return helpers.error('any.invalid', {
+              message: `multiProjectFolders contains folder ID "${multiProjFolder}" which is not in folder_ids or folderId\n  All multiProjectFolders must be present in the main folder list`
+            });
+          }
+        }
+      }
+      
       return value;
     })
     .messages({

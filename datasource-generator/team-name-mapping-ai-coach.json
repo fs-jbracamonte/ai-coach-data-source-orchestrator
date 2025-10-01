@@ -1,7 +1,35 @@
 {
   "projectFolder": "ai-coach",
   "mappings": {
-    "Jamnilloh Bracamonte": "jam",
-    "Mark Jerly Bundalian": "mark"
+    "Jamnilloh Bracamonte": {
+      "shortName": "jam",
+      "fullName": "Jamnilloh Bracamonte",
+      "aliases": [
+        "Jamnilloh",
+        "Bracamonte",
+        "J. Bracamonte",
+        "J Bracamonte",
+        "Jamnilloh B",
+        "Jamnilloh B.",
+        "Jam Bracamonte",
+        "Jam"
+      ]
+    },
+    "Mark Jerly Bundalian": {
+      "shortName": "mark",
+      "fullName": "Mark Jerly Bundalian",
+      "aliases": [
+        "Mark",
+        "Bundalian",
+        "M. Bundalian",
+        "M Bundalian",
+        "Mark Bundalian",
+        "Mark Jerly B",
+        "Mark Jerly B.",
+        "Mark J. Bundalian",
+        "Mark J Bundalian",
+        "Jerly Bundalian"
+      ]
+    }
   }
 }

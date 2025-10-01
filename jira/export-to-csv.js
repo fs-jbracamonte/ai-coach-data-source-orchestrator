@@ -8,7 +8,7 @@ const config = require('../lib/config').load();
 const { JiraAPIError, ConfigurationError, FileSystemError } = require('../lib/errors');
 const { handleError } = require('../lib/error-handler');
 
-// Function to make Jira API request
+// Function to make Jira API request (GET)
 function makeJiraRequest(path, callback) {
   const auth = Buffer.from(`${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString('base64');
   
@@ -68,6 +68,70 @@ function makeJiraRequest(path, callback) {
   req.end();
 }
 
+// Function to make Jira API POST request (for new JQL search endpoint)
+function makeJiraPostRequest(path, body, callback) {
+  const auth = Buffer.from(`${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString('base64');
+  
+  // Get host from config instead of environment
+  const jiraHost = config.jira.host.replace('https://', '').replace('http://', '').replace(/\/$/, '');
+  
+  const postData = JSON.stringify(body);
+  
+  const options = {
+    hostname: jiraHost,
+    path: path,
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${auth}`,
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Content-Length': Buffer.byteLength(postData)
+    }
+  };
+
+  console.log(`Making POST request to: https://${options.hostname}${options.path}`);
+
+  const req = https.request(options, (res) => {
+    let data = '';
+
+    res.on('data', (chunk) => {
+      data += chunk;
+    });
+
+    res.on('end', () => {
+      if (res.statusCode === 200) {
+        callback(null, JSON.parse(data));
+      } else {
+        console.error(`Error: ${res.statusCode} ${res.statusMessage}`);
+        console.error('Response:', data);
+        callback(new JiraAPIError(`HTTP ${res.statusCode}: ${res.statusMessage}`, {
+          statusCode: res.statusCode,
+          host: options.hostname,
+          path: options.path,
+          response: data.substring(0, 500) // First 500 chars of response
+        }));
+      }
+    });
+  });
+
+  req.on('error', (error) => {
+    callback(new JiraAPIError(`Network error: ${error.message}`, {
+      host: options.hostname,
+      path: options.path,
+      originalError: error.message,
+      resolutionSteps: [
+        'Check your internet connection',
+        'Verify the Jira host is accessible',
+        'Check for firewall or proxy restrictions',
+        'Ensure the Jira instance URL is correct'
+      ]
+    }));
+  });
+
+  req.write(postData);
+  req.end();
+}
+
 async function exportJiraData() {
   // Check environment variables (remove JIRA_HOST check)
   if (!process.env.JIRA_EMAIL || !process.env.JIRA_API_TOKEN) {
@@ -119,33 +183,43 @@ async function exportJiraData() {
   console.log(`\nJQL Query: ${jql}\n`);
 
   let allIssues = [];
-  let startAt = 0;
+  let nextPageToken = null;
   const maxResults = 50;
-  let total = 0;
+  let pageCount = 0;
 
-  // Fetch issues with pagination
+  // Fetch issues with pagination using new API
   do {
-    console.log(`Fetching issues ${startAt + 1} to ${startAt + maxResults}...`);
+    pageCount++;
+    console.log(`Fetching page ${pageCount}...`);
     
-    const searchPath = `/rest/api/2/search?jql=${encodeURIComponent(jql)}&startAt=${startAt}&maxResults=${maxResults}&fields=*all`;
+    // Use new JQL search endpoint: POST /rest/api/3/search/jql
+    const searchPath = '/rest/api/3/search/jql';
+    const requestBody = {
+      jql: jql,
+      maxResults: maxResults,
+      fields: ['*all'], // Request all fields explicitly
+    };
+    
+    // Add nextPageToken if this is not the first page
+    if (nextPageToken) {
+      requestBody.nextPageToken = nextPageToken;
+    }
     
     await new Promise((resolve, reject) => {
-      makeJiraRequest(searchPath, (error, data) => {
+      makeJiraPostRequest(searchPath, requestBody, (error, data) => {
         if (error) {
           reject(error);
         } else {
-          total = data.total;
           allIssues = allIssues.concat(data.issues);
-          console.log(`Retrieved ${allIssues.length} of ${total} issues`);
+          nextPageToken = data.nextPageToken || null;
+          console.log(`Retrieved ${allIssues.length} issues so far...`);
           resolve();
         }
       });
     }).catch(error => {
       throw error; // Will be caught by outer catch block
     });
-
-    startAt += maxResults;
-  } while (startAt < total);
+  } while (nextPageToken); // Continue while there's a nextPageToken
 
   if (allIssues.length === 0) {
     console.log('No issues found');

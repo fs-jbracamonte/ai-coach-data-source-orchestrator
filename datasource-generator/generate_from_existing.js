@@ -4,12 +4,10 @@ const DatasourceGenerator = require('./generate_datasources');
 
 // Load configuration
 const config = require('../lib/config').load();
+const { loadTeamMapping } = require('./lib/mapping-resolver');
 
-// Load team name mapping for project folder info
-const nameMappingPath = path.join(__dirname, 'team-name-mapping.json');
-const nameMapping = fs.existsSync(nameMappingPath) 
-  ? require(nameMappingPath) 
-  : { mappings: {} };
+// Load team name mapping using shared resolver
+const nameMapping = loadTeamMapping(config, __dirname);
 
 /**
  * Generate datasource files from existing markdown outputs

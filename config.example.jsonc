@@ -46,7 +46,7 @@
     
     "serviceAccountKeyFile": "./service-account-key.json",  // Path to Google service account JSON (now in main folder)
     "downloadDir": "./transcripts/downloads",    // Directory where files will be downloaded
-    "filePrefix": "fathom-transcript",          // File prefix filter (empty string "" downloads all files)
+    "filePrefix": "fathom",                     // File name filter (case-insensitive, matches anywhere in filename; "" downloads all files)
     "sanitizeFilenames": true,                  // Replace special characters for cross-platform compatibility
     "organizeByFolder": false,                  // When true, creates subdirectories for each folder
     
@@ -58,7 +58,72 @@
     },
     
     "convertToMarkdown": true,                 // Auto-convert .txt transcripts to markdown
-    "markdownOutputDir": "./transcripts/markdown-output"  // Output directory for markdown files
+    "markdownOutputDir": "./transcripts/markdown-output",  // Output directory for markdown files
+    
+    // ========================================
+    // TEAM MEMBER FILTERING (New Feature)
+    // ========================================
+    // Use this when you have a shared folder containing transcripts for multiple projects/teams
+    // and you only want to download transcripts where your specific team members were present.
+    //
+    // EXAMPLE USE CASE:
+    // Your company has a shared "All-Hands-Meetings" folder with transcripts from various teams.
+    // You only want transcripts where at least 2 of your AI Coach team members were present.
+    
+    "filterByTeamMembers": false,              // Set to true to enable team member filtering
+    "teamMembers": [                           // List of team member full names to filter by
+      "John Doe",                              // Use exact names as they appear in transcripts
+      "Jane Smith",                            // Names will be matched against transcript attendees
+      "Bob Johnson"                            // using the mappings from teamMappingFile
+    ],
+    "minimumTeamMembersRequired": 2,           // Minimum number of team members that must be present
+                                               // to download a transcript (default: 1)
+                                               // Set to 2+ to ensure multiple team members attended
+    
+    "teamMappingFile": "team-name-mapping.json",  // Path to team name mapping file (optional)
+                                                   // Default: "team-name-mapping.json"
+                                                   // Used to normalize name variations (e.g., "John" -> "John Doe")
+    
+    // ========================================
+    // MULTI-PROJECT FOLDER CONFIGURATION
+    // ========================================
+    // Specify which folders contain multiple projects and should use team member filtering.
+    // Filtering will ONLY apply to folders listed here. Other folders download all transcripts.
+    //
+    // EXAMPLE SCENARIO:
+    // - folder-id-1: Your team's dedicated folder (download all)
+    // - folder-id-2: Company-wide folder (filter by team members)
+    // - folder-id-3: Cross-team initiatives folder (filter by team members)
+    
+    "multiProjectFolders": [                   // Array of folder IDs that need filtering
+      "your-google-drive-folder-id-2"          // Only folder-id-2 will use team member filtering
+                                               // folder-id-1 will download all transcripts
+    ]
+    
+    // FILTERING BEHAVIOR:
+    // 1. If filterByTeamMembers = false: All transcripts downloaded from all folders (default)
+    // 2. If filterByTeamMembers = true AND multiProjectFolders is empty: All folders are filtered
+    // 3. If filterByTeamMembers = true AND multiProjectFolders is set: Only specified folders are filtered
+    //
+    // COMMON CONFIGURATIONS:
+    //
+    // A) Single team folder (no filtering needed):
+    //    "filterByTeamMembers": false
+    //
+    // B) Multiple folders, all dedicated to your team (no filtering needed):
+    //    "filterByTeamMembers": false
+    //
+    // C) Mix of dedicated + shared folders (recommended):
+    //    "filterByTeamMembers": true,
+    //    "teamMembers": ["John Doe", "Jane Smith"],
+    //    "minimumTeamMembersRequired": 2,
+    //    "multiProjectFolders": ["shared-folder-id-1", "shared-folder-id-2"]
+    //
+    // D) All folders are shared (filter all):
+    //    "filterByTeamMembers": true,
+    //    "teamMembers": ["John Doe", "Jane Smith"],
+    //    "minimumTeamMembersRequired": 1
+    //    // multiProjectFolders not specified = filter all folders
   }
 }
 

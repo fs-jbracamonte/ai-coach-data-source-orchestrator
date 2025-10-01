@@ -306,8 +306,10 @@ async function main() {
   const csvFiles = fs.readdirSync(dataDir).filter(file => file.endsWith('.csv'));
   
   if (csvFiles.length === 0) {
-    console.error('No CSV files found in the data directory.');
-    process.exit(1);
+    console.log('No CSV files found in the data directory.');
+    console.log('This may be because the query returned no results for the specified date range.');
+    console.log('Skipping markdown conversion.');
+    return; // Exit gracefully instead of with error
   }
 
   // Process all CSV files

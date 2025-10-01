@@ -1,56 +1,41 @@
 {
-  "projectFolder": "rocks",
+  "projectFolder": "engagepath",
   "mappings": {
-    "Allan Sheldon Ibañez": {
-      "shortName": "allan",
+    "John Michael Losito": {
+      "shortName": "john",
+      "fullName": "John Michael Losito",
       "aliases": [
-        "Allan Sheldon Ibanez",
-        "Allan_Sheldon_Iba_ez"
+        "JM Losito"
       ]
     },
-    "Jong": {
-      "shortName": "junelito",
-      "fullName": "Junelito Salugsugan",
+    "Ismael Jr. Cristal": {
+      "shortName": "ismael",
+      "fullName": "Ismael Jr. Cristal",
       "aliases": [
-        "Junelito-Salugsugan",
-        "Jong"
+        "Ish"
       ]
     },
-    "Eusebio Mamac": {
-      "shortName": "eusebio"
-    },
-    "Carmencito Berdon": {
-      "shortName": "carmencito"
-    },
-    "Aro Arneil": {
-      "shortName": "arneil",
+    "Harvey Aparece": {
+      "shortName": "harvey",
+      "fullName": "Harvey Aparece",
       "aliases": [
-        "Arneil Aro",
-        "Arneil-Aro"
+        "Harvey"
       ]
     },
-    "Jan Leryc Ibalio": {
-      "shortName": "leryc"
-    },
-    "Leryc Ibalio": {
-      "shortName": "leryc"
-    },
-    "Ryan Sutana": {
-      "shortName": "ryan"
-    },
-    "Michael Roy M. Otilla": {
-      "shortName": "michael",
+    "Gerald de los Santos": {
+      "shortName": "gerald",
+      "fullName": "Gerald de los Santos",
       "aliases": [
-        "Michael Roy-Otilla",
-        "Michael Roy Otilla",
-        "Michael_Roy_M_Otilla"
+        "Gerald"
       ]
     },
-    "Reynaldo Rama": {
-      "shortName": "reynaldo"
-    },
-    "Rangie Laurente": {
-      "shortName": "rangie"
+    "Santos Ngo Jr": {
+      "shortName": "santos",
+      "fullName": "Santos Ngo Jr",
+      "aliases": [
+        "Santos Jr Ngo"
+      ]
     }
   }
 }
+

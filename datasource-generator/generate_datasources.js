@@ -6,12 +6,10 @@ const { spawn } = require('child_process');
 const config = require('../lib/config').load();
 const { FileSystemError, ValidationError, ConfigurationError } = require('../lib/errors');
 const { handleError } = require('../lib/error-handler');
+const { loadTeamMapping, getShortName: getShortNameUtil } = require('./lib/mapping-resolver');
 
-// Load team name mapping
-const nameMappingPath = path.join(__dirname, 'team-name-mapping.json');
-const nameMapping = fs.existsSync(nameMappingPath) 
-  ? require(nameMappingPath) 
-  : { mappings: {} };
+// Load team name mapping using shared resolver
+const nameMapping = loadTeamMapping(config, __dirname);
 
 class DatasourceGenerator {
   constructor() {
@@ -31,16 +29,26 @@ class DatasourceGenerator {
 
   /**
    * Get the short name for a team member
+   * 
+   * Supports both mapping formats:
+   * - Old format: "Team Member Name": "shortname"
+   * - New format: "Team Member Name": { shortName: "shortname", fullName: "...", aliases: [...] }
+   * 
+   * @param {string} fullName - The full name of the team member
+   * @returns {string} The short name identifier (lowercase with underscores)
+   * 
+   * @example
+   * // With new format mapping:
+   * getShortName("Mark Jerly Bundalian") // Returns: "mark"
+   * 
+   * // With old format mapping:
+   * getShortName("John Doe") // Returns: "john"
+   * 
+   * // Without mapping:
+   * getShortName("Jane Smith") // Returns: "jane_smith"
    */
   getShortName(fullName) {
-    const mapping = nameMapping.mappings[fullName];
-    if (mapping) {
-      // Handle both old string format and new object format
-      return typeof mapping === 'string' ? mapping : mapping.shortName;
-    }
-    
-    // If no mapping, use full name converted to lowercase with underscores
-    return fullName.toLowerCase().replace(/\s+/g, '_');
+    return getShortNameUtil(fullName, nameMapping);
   }
 
   /**

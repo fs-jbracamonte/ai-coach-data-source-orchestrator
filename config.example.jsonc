@@ -98,7 +98,13 @@
     "multiProjectFolders": [                   // Array of folder IDs that need filtering
       "your-google-drive-folder-id-2"          // Only folder-id-2 will use team member filtering
                                                // folder-id-1 will download all transcripts
-    ]
+    ],
+    
+    // ========================================
+    // TEAM FILTERING BEHAVIOR
+    // ========================================
+    // When team filtering is enabled, the system downloads files and checks 
+    // actual participant lists to ensure accuracy by matching against configured team members.
     
     // FILTERING BEHAVIOR:
     // 1. If filterByTeamMembers = false: All transcripts downloaded from all folders (default)

@@ -6,6 +6,13 @@ require('dotenv').config();
 
 // Load config
 const config = require('../lib/config').load();
+const { loadTeamMapping, findMatchingTeamMember } = require('../lib/name-matcher');
+
+// Load team name mapping
+// Note: We're pointing to the generator's mapping file.
+const mappingPath = path.join(__dirname, '..', 'datasource-generator', 'team-name-mapping.json');
+const nameMapping = loadTeamMapping(mappingPath);
+
 
 async function splitCsvByAssignee() {
   // Check if project is configured
@@ -27,6 +34,11 @@ async function splitCsvByAssignee() {
   
   // Check if team_members is configured
   const filterByTeamMembers = config.jira.team_members && Array.isArray(config.jira.team_members) && config.jira.team_members.length > 0;
+  
+  if (filterByTeamMembers && !nameMapping) {
+    console.warn('Warning: Team member filtering is enabled, but the team name mapping file could not be loaded.');
+    console.warn(`Attempted to load from: ${mappingPath}`);
+  }
   
   console.log(`Reading CSV file: ${inputFile}`);
   if (filterByTeamMembers) {
@@ -67,19 +79,29 @@ async function splitCsvByAssignee() {
         }
         
         // Process based on whether we're filtering by team members
-        if (!filterByTeamMembers || config.jira.team_members.includes(assignee)) {
+        const teamMemberMatch = filterByTeamMembers ? findMatchingTeamMember(assignee, config.jira.team_members, nameMapping) : null;
+
+        if (!filterByTeamMembers || teamMemberMatch) {
+          // Use the canonical name from the config/mapping for grouping
+          // findMatchingTeamMember returns { teamMember: "Full Name", matchedVia: "alias" }
+          const groupName = teamMemberMatch ? teamMemberMatch.teamMember : assignee;
+
           // Initialize array for this assignee if not exists
-          if (!issuesByAssignee[assignee]) {
-            issuesByAssignee[assignee] = [];
+          if (!issuesByAssignee[groupName]) {
+            issuesByAssignee[groupName] = [];
           }
           
           // Add issue to assignee's array
-          issuesByAssignee[assignee].push(row);
+          issuesByAssignee[groupName].push(row);
         }
       })
       .on('end', async () => {
         if (Object.keys(issuesByAssignee).length === 0) {
-          console.log('No issues found.');
+          if (filterByTeamMembers) {
+            console.log('No issues found for the specified team members.');
+          } else {
+            console.log('No issues found.');
+          }
           resolve();
           return;
         }

@@ -483,7 +483,11 @@ async function downloadFilesFromFolder(drive, folderId, folderName, prefix = '')
       fs.mkdirSync(markdownDir, { recursive: true });
     }
 
-    // Download each file (with optional team filtering)
+    // ========================================
+    // DOWNLOAD AND FINAL FILTER
+    // ========================================
+    console.log(`\n  📥 Downloading and processing ${filteredFiles.length} file(s)...`);
+    
     const convertedFiles = [];
     let teamFilterStats = { evaluated: 0, excluded: 0 };
     
@@ -492,7 +496,7 @@ async function downloadFilesFromFolder(drive, folderId, folderName, prefix = '')
       const downloadPath = path.join(downloadDir, safeFilename);
       await downloadFile(drive, file.id, safeFilename, downloadPath);
 
-      // Apply team filtering if active
+      // Apply final team filtering if active (checks actual participant list)
       let shouldInclude = true;
       if (teamFilterActive && CONVERT_TO_MARKDOWN && safeFilename.endsWith('.txt')) {
         teamFilterStats.evaluated++;
@@ -518,12 +522,12 @@ async function downloadFilesFromFolder(drive, folderId, folderName, prefix = '')
           
           if (!shouldInclude) {
             teamFilterStats.excluded++;
-            console.log(`  ⊘ Skipped: ${safeFilename} - ${filterResult.matches.length}/${minimumRequired} team members (${filterResult.matches.join(', ') || 'none'})`);
+            console.log(`  ⊘ Final skip: ${safeFilename} - ${filterResult.matches.length}/${minimumRequired} team members (${filterResult.matches.join(', ') || 'none'})`);
             // Delete the downloaded file since it doesn't meet criteria
             fs.unlinkSync(downloadPath);
             continue; // Skip conversion
           } else {
-            console.log(`  ✓ Match: ${safeFilename} - ${filterResult.matches.length} team members (${filterResult.matches.join(', ')})`);
+            console.log(`  ✓ Final match: ${safeFilename} - ${filterResult.matches.length} team members (${filterResult.matches.join(', ')})`);
           }
         } catch (filterError) {
           // If filtering fails, include by default (fail-open)
@@ -540,20 +544,19 @@ async function downloadFilesFromFolder(drive, folderId, folderName, prefix = '')
       }
     }
 
-    console.log(`  ✓ Downloaded ${filteredFiles.length} file(s) to ${downloadDir}`);
+    console.log(`\n  ✓ Downloaded ${filteredFiles.length} file(s) to ${downloadDir}`);
     
     if (CONVERT_TO_MARKDOWN && convertedFiles.length > 0) {
       console.log(`  ✓ Converted ${convertedFiles.length} transcript(s) to markdown`);
     }
     
-    // Log team filtering statistics
+    // Log team filtering summary
     if (teamFilterActive && teamFilterStats.evaluated > 0) {
-      const matched = teamFilterStats.evaluated - teamFilterStats.excluded;
-      if (teamFilterStats.excluded > 0) {
-        console.log(`  📊 Team filter: ${matched} matched, ${teamFilterStats.excluded} excluded`);
-      } else {
-        console.log(`  📊 Team filter: All ${teamFilterStats.evaluated} transcripts matched team criteria`);
-      }
+      const finalMatched = teamFilterStats.evaluated - teamFilterStats.excluded;
+      console.log(`\n  📊 Team Filtering Summary:`);
+      console.log(`     Files evaluated: ${teamFilterStats.evaluated}`);
+      console.log(`     Matched criteria: ${finalMatched}`);
+      console.log(`     Excluded (insufficient members): ${teamFilterStats.excluded}`);
     }
 
     return { 
@@ -616,10 +619,11 @@ async function downloadFilesWithPrefix(drive, folderIds, prefix = '') {
     // Team filtering summary
     if (totalEvaluated > 0) {
       console.log(`\n👥 Team Filtering Summary:`);
-      console.log(`   Transcripts evaluated: ${totalEvaluated}`);
-      console.log(`   Transcripts matched: ${totalEvaluated - totalExcluded}`);
-      console.log(`   Transcripts excluded: ${totalExcluded}`);
+      console.log(`   Files evaluated: ${totalEvaluated}`);
+      console.log(`   Matched: ${totalEvaluated - totalExcluded}`);
+      console.log(`   Excluded: ${totalExcluded}`);
     }
+    
     if (ORGANIZE_BY_FOLDER) {
       console.log(`Files organized by folder in: ${DOWNLOAD_DIR}`);
     }
@@ -702,4 +706,7 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { initializeDrive, downloadFilesWithPrefix };
+module.exports = { 
+  initializeDrive, 
+  downloadFilesWithPrefix
+};

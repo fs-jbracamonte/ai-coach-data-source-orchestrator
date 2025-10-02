@@ -437,7 +437,7 @@ async function convertCsvToMarkdown(csvFile, outputFile) {
  */
 async function processAllCsvFiles() {
   const inputDir = path.join(__dirname, 'data', 'by-assignee');
-  const outputDir = path.join(__dirname, 'md_output');
+  const outputDir = path.join(__dirname, 'md_output', 'by-assignee');
   
   // Create output directory if it doesn't exist
   if (!fs.existsSync(outputDir)) {

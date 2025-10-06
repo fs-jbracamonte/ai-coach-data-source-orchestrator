@@ -28,7 +28,7 @@ Edit `team-name-mapping.json` to configure:
 
 ## Usage
 
-### Generate Individual Team Member Datasources
+### Generate Individual Team Member Datasources (reportType: 1on1)
 
 This command will:
 1. Query and generate daily reports for the employee IDs configured in config.json
@@ -39,10 +39,19 @@ This command will:
 **Note**: Daily reports will be queried based on the `employee_id` array in your config.json. Make sure the employee IDs match the team members you want to generate datasources for.
 
 ```bash
-npm run datasource:generate
+# Preferred (report types)
+node datasource-generator/generate_datasources.js --team rocks --report 1on1
+node datasource-generator/generate_datasources.js --team engagepath --report 1on1
+
+# NPM scripts
+npm run rocks:1on1
+npm run engagepath:1on1
+
+# Legacy (single-file config)
+CONFIG_FILE=configs/rocks/config.json npm run datasource:generate
 ```
 
-### Generate Team-Level Datasource
+### Generate Team-Level Datasource (reportType: team)
 
 This command generates a single datasource file for the entire team:
 1. Runs `jira:team-all` to generate a consolidated team report
@@ -50,6 +59,11 @@ This command generates a single datasource file for the entire team:
 3. Combines everything into a single `datasource_<project>_team.py` file
 
 ```bash
+# Preferred
+node datasource-generator/generate_team_datasource.js --team rocks --report team
+npm run rocks:team
+
+# Legacy
 npm run datasource:team
 ```
 
@@ -58,7 +72,7 @@ For project-specific team datasources:
 npm run rocks:datasource-team
 ```
 
-### Generate Weekly Digest Datasource
+### Generate Weekly Digest Datasource (reportType: weekly)
 
 This command generates a comprehensive weekly digest that includes daily reports:
 1. Runs `daily:all` to generate daily reports for configured employee IDs
@@ -67,6 +81,11 @@ This command generates a comprehensive weekly digest that includes daily reports
 4. Combines all three data sources into a single `datasource_weekly_<project>.py` file
 
 ```bash
+# Preferred
+node datasource-generator/generate_weekly_digest.js --team rocks --report weekly
+npm run rocks:weekly
+
+# Legacy
 npm run datasource:weekly-digest
 ```
 
@@ -83,17 +102,20 @@ If you already have the markdown files generated, you can create datasource file
 npm run datasource:from-existing
 ```
 
-### Using Different Configurations
+### Configuration
 
 You can use different config files:
 
-```bash
-# Using a custom config
-CONFIG_FILE=config.project1.json npm run datasource:generate
+Configs are hierarchical under `configs/`. Merge order:
+`configs/shared/defaults.json` → `configs/{team}/config.json` → `configs/{team}/config.{reportType}.json`
 
-# Or using the run-with-config utility
-npm run use config.project1.json datasource:generate
-```
+- Preferred loader: `loadForReportType(team, reportType)` via CLI flags shown above
+- Legacy loader: `CONFIG_FILE` environment variable
+
+Troubleshooting:
+- Ensure `configs/{team}/config.json` exists
+- For weekly: verify `jira/md_output/by-assignee/` contains assignee markdown
+- For 1on1: if only one file is produced, check if `configs/{team}/config.1on1.json` narrows `jira.team_members` to one name
 
 ## Output
 

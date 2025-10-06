@@ -24,13 +24,27 @@ Additional validation functions for specific formats:
 - `validateFolderIds()` - Validates array of folder IDs
 
 ### 3. Config Manager (`lib/config.js`)
-Automatically validates on load:
+Automatically validates on load (single-file and merged hierarchical configs):
 - Validates configuration structure with Joi schema
 - Runs additional runtime validators
 - Throws descriptive errors with field names and examples
 - Caches validated config for performance
 
 ## Required vs Optional Fields
+### Report Type (Optional)
+- `reportType` must be one of: `1on1`, `team`, `weekly` when present
+
+Report-type guidance:
+- `1on1`:
+  - `jira.team_members` may contain a single member
+  - `dailyReports.query.employee_id` may be a single ID
+- `team`:
+  - `dailyReports` section may be omitted
+  - `jira.team_members` may be empty (`[]`) to include unassigned tickets
+- `weekly`:
+  - `jira.team_members` should be non-empty
+  - `dailyReports.query.employee_id` should cover the full team
+
 
 ### Daily Reports Section (Optional)
 If included, all fields are **required**:
@@ -85,6 +99,33 @@ The `employee_id` field supports multiple formats for flexibility:
 ```
 
 ## Common Validation Errors
+### 6. Invalid Report Type
+```
+Error: Invalid reportType: 'monthly'. Allowed values are 1on1, team, weekly.
+```
+
+**Fix**: Use a valid report type or remove the field:
+```json
+// ✓ Correct
+"reportType": "weekly"
+```
+
+### 7. Weekly Missing Team Members
+```
+Error: weekly report requires jira.team_members to be non-empty
+```
+
+**Fix**: Provide the full team list in base or weekly override:
+```json
+"jira": { "team_members": ["Alice", "Bob"] }
+```
+
+### 8. Team Report With Daily Reports
+```
+Warning: team reportType ignores dailyReports section
+```
+
+**Resolution**: Remove `dailyReports` from the team override, keep it in base if needed elsewhere.
 
 ### 1. Invalid Date Format
 ```

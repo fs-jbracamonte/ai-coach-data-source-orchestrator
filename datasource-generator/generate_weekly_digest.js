@@ -2,13 +2,86 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
-// Load configuration
-const config = require('../lib/config').load();
+// Load configuration (deferred)
+const configModule = require('../lib/config');
 const { handleError } = require('../lib/error-handler');
+const { ConfigurationError } = require('../lib/errors');
 const { loadTeamMapping } = require('./lib/mapping-resolver');
 
-// Load team name mapping using shared resolver
-const nameMapping = loadTeamMapping(config, __dirname);
+// CLI args and hierarchical config support
+function parseArgs(argv) {
+  const args = { help: false };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--help' || a === '-h') args.help = true;
+    else if (a === '--team' || a === '-t') args.team = argv[++i];
+    else if (a === '--report' || a === '-r') args.report = argv[++i];
+  }
+  return args;
+}
+
+function getAvailableTeams() {
+  try {
+    const configsDir = path.join(__dirname, '..', 'configs');
+    if (!fs.existsSync(configsDir)) return [];
+    return fs.readdirSync(configsDir, { withFileTypes: true })
+      .filter(d => d.isDirectory() && d.name !== 'shared')
+      .map(d => d.name);
+  } catch (_) { return []; }
+}
+
+function printHelp() {
+  const teams = getAvailableTeams();
+  console.log('\nUsage:');
+  console.log('  node datasource-generator/generate_weekly_digest.js --team <team> --report weekly');
+  console.log('\nOptions:');
+  console.log('  --team, -t     Team name (e.g., rocks, engagepath)');
+  console.log('  --report, -r   Report type (must be weekly for this script)');
+  console.log('  --help, -h     Show this help');
+  console.log('\nAvailable teams:', teams.length ? teams.join(', ') : '(none found)');
+  console.log('Allowed report types: weekly');
+  console.log('\nExamples:');
+  console.log('  node datasource-generator/generate_weekly_digest.js --team rocks --report weekly');
+  console.log('  CONFIG_FILE=config.rocks.json node datasource-generator/generate_weekly_digest.js');
+}
+
+let config;
+let nameMapping;
+(() => {
+  try {
+    const args = parseArgs(process.argv.slice(2));
+    if (args.help) {
+      printHelp();
+      process.exit(0);
+    }
+
+    if (args.team && args.report) {
+      if (args.report !== 'weekly') {
+        throw new ConfigurationError("Invalid report type for generate_weekly_digest.js. Expected 'weekly'", {
+          reportType: args.report,
+          expected: 'weekly'
+        });
+      }
+      process.env.TEAM = args.team;
+      process.env.REPORT_TYPE = 'weekly';
+      console.log(`[config] Using hierarchical config: TEAM=${args.team}, REPORT_TYPE=weekly`);
+      config = configModule.ConfigManager.loadForReportType(args.team, 'weekly');
+    } else {
+      console.log(`[config] Using legacy single-file config: ${process.env.CONFIG_FILE || 'config.json'}`);
+      config = configModule.load();
+    }
+
+    // Load team name mapping using shared resolver
+    nameMapping = loadTeamMapping(config, __dirname);
+  } catch (error) {
+    handleError(error, {
+      module: 'datasource-generator',
+      operation: 'init-generate-weekly-digest',
+      configFile: process.env.CONFIG_FILE || 'config.json'
+    });
+    process.exit(1);
+  }
+})();
 
 class WeeklyDigestGenerator {
   constructor() {

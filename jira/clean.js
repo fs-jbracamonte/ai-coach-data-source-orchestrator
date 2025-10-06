@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Directories to clean
-const dirsToClean = ['data', 'data/by-assignee', 'md_output'];
+const dirsToClean = ['data', 'data/by-assignee', 'md_output', 'md_output/by-assignee'];
 
 console.log('JIRA - Clean Output Directories\n');
 

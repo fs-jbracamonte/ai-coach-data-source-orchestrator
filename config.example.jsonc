@@ -1,10 +1,14 @@
-// Configuration example for Data Source Orchestrator
-// This is a JSONC file (JSON with Comments) - your editor should recognize the .jsonc extension
-// Copy this file to config.json and remove all comments before use
-// Standard JSON does not support comments, so they must be removed in the actual config.json
+// Configuration example for Data Source Orchestrator (BASE CONFIG)
+// This file represents a BASE team config intended to live at: configs/{team}/config.json
+// For report-specific overrides, create minimal files at:
+//   - configs/{team}/config.1on1.json
+//   - configs/{team}/config.team.json
+//   - configs/{team}/config.weekly.json
+// Merge order: configs/shared/defaults.json → configs/{team}/config.json → configs/{team}/config.{reportType}.json
 //
-// IMPORTANT: Sensitive credentials (SSH, Database, Jira API) are now stored in .env file
-// Copy example.env to .env and fill in your actual credentials
+// This is a JSONC file (JSON with Comments) - remove comments for actual JSON usage.
+// IMPORTANT: Sensitive credentials (SSH, Database, Jira API) are stored in .env
+// Copy example.env to .env and fill in your credentials
 
 {
   // Configuration for fetching daily reports from the database
@@ -27,7 +31,7 @@
     "project": "PROJ",                       // Your Jira project key (e.g., 'AICD', 'MVP', 'PROJ')
     "start_date": "2025-01-01",             // Start date for ticket filtering (YYYY-MM-DD)
     "end_date": "2025-01-31",               // End date for ticket filtering (YYYY-MM-DD)
-    "team_members": [                        // List of team members to filter tickets by assignee
+    "team_members": [                        // BASE: Full team list for the project
       "John Doe",                           // Use exact names as they appear in Jira
       "Jane Smith"                          // Leave as empty array [] to include all assignees
     ]
@@ -70,7 +74,7 @@
     // Your company has a shared "All-Hands-Meetings" folder with transcripts from various teams.
     // You only want transcripts where at least 2 of your AI Coach team members were present.
     
-    "filterByTeamMembers": false,              // Set to true to enable team member filtering
+    "filterByTeamMembers": false,              // Shared default; override per team/report as needed
     "teamMembers": [                           // List of team member full names to filter by
       "John Doe",                              // Use exact names as they appear in transcripts
       "Jane Smith",                            // Names will be matched against transcript attendees
@@ -80,7 +84,7 @@
                                                // to download a transcript (default: 1)
                                                // Set to 2+ to ensure multiple team members attended
     
-    "teamMappingFile": "team-name-mapping.json",  // Path to team name mapping file (optional)
+    "teamMappingFile": "team-name-mapping.json",  // Typically set to datasource-generator/team-name-mapping.json
                                                    // Default: "team-name-mapping.json"
                                                    // Used to normalize name variations (e.g., "John" -> "John Doe")
     
@@ -132,6 +136,27 @@
     //    // multiProjectFolders not specified = filter all folders
   }
 }
+
+// REPORT-SPECIFIC OVERRIDE EXAMPLES (MINIMAL):
+// configs/{team}/config.1on1.json
+// {
+//   "reportType": "1on1",
+//   "jira": { "team_members": ["John Doe"] },
+//   "dailyReports": { "query": { "employee_id": 123 } }
+// }
+//
+// configs/{team}/config.team.json
+// {
+//   "reportType": "team",
+//   "jira": { "team_members": [] }
+// }
+//
+// configs/{team}/config.weekly.json
+// {
+//   "reportType": "weekly",
+//   "jira": { "team_members": ["John Doe", "Jane Smith"] },
+//   "dailyReports": { "query": { "employee_id": [123,456] } }
+// }
 
 // SETUP NOTES:
 // 

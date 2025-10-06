@@ -2,14 +2,86 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
-// Load configuration
-const config = require('../lib/config').load();
+// Load configuration (deferred)
+const configModule = require('../lib/config');
 const { FileSystemError, ValidationError, ConfigurationError } = require('../lib/errors');
 const { handleError } = require('../lib/error-handler');
 const { loadTeamMapping, getShortName: getShortNameUtil } = require('./lib/mapping-resolver');
 
-// Load team name mapping using shared resolver
-const nameMapping = loadTeamMapping(config, __dirname);
+// CLI args and hierarchical config support
+function parseArgs(argv) {
+  const args = { help: false };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--help' || a === '-h') args.help = true;
+    else if (a === '--team' || a === '-t') args.team = argv[++i];
+    else if (a === '--report' || a === '-r') args.report = argv[++i];
+  }
+  return args;
+}
+
+function getAvailableTeams() {
+  try {
+    const configsDir = path.join(__dirname, '..', 'configs');
+    if (!fs.existsSync(configsDir)) return [];
+    return fs.readdirSync(configsDir, { withFileTypes: true })
+      .filter(d => d.isDirectory() && d.name !== 'shared')
+      .map(d => d.name);
+  } catch (_) { return []; }
+}
+
+function printHelp() {
+  const teams = getAvailableTeams();
+  console.log('\nUsage:');
+  console.log('  node datasource-generator/generate_datasources.js --team <team> --report 1on1');
+  console.log('\nOptions:');
+  console.log('  --team, -t     Team name (e.g., rocks, engagepath)');
+  console.log('  --report, -r   Report type (must be 1on1 for this script)');
+  console.log('  --help, -h     Show this help');
+  console.log('\nAvailable teams:', teams.length ? teams.join(', ') : '(none found)');
+  console.log('Allowed report types: 1on1');
+  console.log('\nExamples:');
+  console.log('  node datasource-generator/generate_datasources.js --team rocks --report 1on1');
+  console.log('  CONFIG_FILE=config.rocks.json node datasource-generator/generate_datasources.js');
+}
+
+let config;
+let nameMapping;
+(() => {
+  try {
+    const args = parseArgs(process.argv.slice(2));
+    if (args.help) {
+      printHelp();
+      process.exit(0);
+    }
+
+    if (args.team && args.report) {
+      if (args.report !== '1on1') {
+        throw new ConfigurationError("Invalid report type for generate_datasources.js. Expected '1on1'", {
+          reportType: args.report,
+          expected: '1on1'
+        });
+      }
+      process.env.TEAM = args.team;
+      process.env.REPORT_TYPE = '1on1';
+      console.log(`[config] Using hierarchical config: TEAM=${args.team}, REPORT_TYPE=1on1`);
+      config = configModule.ConfigManager.loadForReportType(args.team, '1on1');
+    } else {
+      console.log(`[config] Using legacy single-file config: ${process.env.CONFIG_FILE || 'config.json'}`);
+      config = configModule.load();
+    }
+
+    // Load team name mapping using shared resolver
+    nameMapping = loadTeamMapping(config, __dirname);
+  } catch (error) {
+    handleError(error, {
+      module: 'datasource-generator',
+      operation: 'init-generate-datasources',
+      configFile: process.env.CONFIG_FILE || 'config.json'
+    });
+    process.exit(1);
+  }
+})();
 
 class DatasourceGenerator {
   constructor() {
@@ -19,6 +91,7 @@ class DatasourceGenerator {
     this.templatePath = path.join(__dirname, 'templates', 'datasource_template.py');
     this.dailyReportsDir = path.join(__dirname, '..', 'daily-reports', 'md-output');
     this.jiraDir = path.join(__dirname, '..', 'jira', 'md_output');
+    this.jiraAssigneeDir = path.join(this.jiraDir, 'by-assignee');
     this.transcriptsDir = path.join(__dirname, '..', 'transcripts', 'markdown-output');
     
     // Ensure output directory exists
@@ -251,7 +324,8 @@ class DatasourceGenerator {
     const dailyContent = this.findTeamMemberMarkdown(this.dailyReportsDir, teamMemberName) || 
                         '# Daily Reports\n\nNo daily reports found for this team member.';
     
-    const jiraContent = this.findTeamMemberMarkdown(this.jiraDir, teamMemberName) ||
+    const jiraContent = this.findTeamMemberMarkdown(this.jiraAssigneeDir, teamMemberName) ||
+                       this.findTeamMemberMarkdown(this.jiraDir, teamMemberName) ||
                        '# JIRA Tickets Report\n\nNo JIRA tickets found for this team member.';
     
     // Transcripts are shared across all team members

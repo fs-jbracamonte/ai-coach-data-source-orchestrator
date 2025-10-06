@@ -8,7 +8,7 @@ A collection of tools for aggregating and processing data from multiple sources 
 data-source-orchestrator/
 ├── .env                          # Environment variables (create from example.env)
 ├── example.env                   # Example environment variables file
-├── config.json                   # Main configuration file (create from config.example.jsonc)
+├── config.json                   # Legacy single-file config (backward compatible)
 ├── config.example.jsonc          # Example configuration with comments
 ├── config.project1.example.json  # Example config for project1
 ├── config.project2.example.json  # Example config for project2
@@ -18,6 +18,19 @@ data-source-orchestrator/
 ├── daily-reports/                # Database report extraction and processing
 ├── jira/                         # Jira ticket export and analysis
 ├── transcripts/                  # Google Drive transcript download and conversion
+├── configs/                      # NEW: Hierarchical configuration directory
+│   ├── shared/                   # Shared defaults applied to all teams
+│   │   └── defaults.json
+│   ├── rocks/                    # Team: ROCKS
+│   │   ├── config.json           # Base team config (required)
+│   │   ├── config.1on1.json      # Report override (optional)
+│   │   ├── config.team.json      # Report override (optional)
+│   │   └── config.weekly.json    # Report override (optional)
+│   └── engagepath/               # Team: EngagePath
+│       ├── config.json           # Base team config (required)
+│       ├── config.1on1.json      # Report override (optional)
+│       ├── config.team.json      # Report override (optional)
+│       └── config.weekly.json    # Report override (optional)
 └── package.json                  # Node.js dependencies
 ```
 
@@ -56,9 +69,21 @@ data-source-orchestrator/
    - **Jira Integration**: See [jira/README.md](jira/README.md)
    - **Transcript Processing**: See [transcripts/SETUP_GOOGLE_DRIVE.md](transcripts/SETUP_GOOGLE_DRIVE.md)
 
-## Configuration Overview
+## Configuration Structure
 
-The `config.json` file contains three main sections:
+Use hierarchical configs under `configs/`:
+
+- Merge order: `configs/shared/defaults.json` → `configs/{team}/config.json` → `configs/{team}/config.{reportType}.json`
+- Load via `lib/config.js` using either:
+  - Legacy: `const config = require('../lib/config').load();` (single file via CONFIG_FILE)
+  - Report types: `const config = require('../lib/config').ConfigManager.loadForReportType(team, reportType);`
+
+Report types:
+- `1on1`: Per-member generation (uses full team from base unless override narrows to one)
+- `team`: Team-level datasource, typically ignores `dailyReports`
+- `weekly`: Weekly digest; includes per-assignee Jira, all daily reports, transcripts
+
+The merged configuration contains these sections:
 
 ### dailyReports
 - Query parameters for filtering employee reports
@@ -90,7 +115,7 @@ The `config.json` file contains three main sections:
 
 The system supports multiple project configurations. You can run commands for different projects using:
 
-**Pre-configured project scripts:**
+**Pre-configured project scripts (deprecated, still supported):**
 ```bash
 # Run all tasks for project1
 npm run project1:all
@@ -105,7 +130,7 @@ npm run project2:all
 npm run project2:daily
 ```
 
-**Custom config file (recommended - cross-platform):**
+**Custom config file (legacy - cross-platform):**
 ```bash
 # Using the 'use' helper command
 npm run use config.myproject.json daily:all
@@ -128,6 +153,40 @@ set CONFIG_FILE=config.myproject.json && npm run all
 # On Windows (PowerShell)
 $env:CONFIG_FILE="config.myproject.json"; npm run all
 ```
+
+### Report-Type Commands (NEW)
+
+Use these commands to run per-team with report types:
+
+```bash
+# ROCKS
+npm run rocks:1on1     # Individual datasources (one file per member)
+npm run rocks:team     # Team datasource (consolidated)
+npm run rocks:weekly   # Weekly digest (daily + Jira per-assignee + transcripts)
+
+# EngagePath
+npm run engagepath:1on1
+npm run engagepath:team
+npm run engagepath:weekly
+```
+
+Generic (no team specified; legacy single-file config):
+```bash
+npm run generate:1on1
+npm run generate:team
+npm run generate:weekly
+```
+
+Config file locations:
+
+| Team       | Report Type | Base Config                           | Report Override                                   |
+|------------|-------------|----------------------------------------|---------------------------------------------------|
+| rocks      | 1on1        | `configs/rocks/config.json`            | `configs/rocks/config.1on1.json` (optional)       |
+| rocks      | team        | `configs/rocks/config.json`            | `configs/rocks/config.team.json` (optional)       |
+| rocks      | weekly      | `configs/rocks/config.json`            | `configs/rocks/config.weekly.json` (optional)     |
+| engagepath | 1on1        | `configs/engagepath/config.json`       | `configs/engagepath/config.1on1.json` (optional)  |
+| engagepath | team        | `configs/engagepath/config.json`       | `configs/engagepath/config.team.json` (optional)  |
+| engagepath | weekly      | `configs/engagepath/config.json`       | `configs/engagepath/config.weekly.json` (optional)|
 
 ### Adding New Projects
 

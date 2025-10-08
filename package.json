@@ -66,6 +66,10 @@
     "engagepath:1on1": "cross-env CONFIG_FILE=configs/engagepath/config.json node datasource-generator/generate_datasources.js",
     "engagepath:team": "node datasource-generator/generate_team_datasource.js --team engagepath --report team",
     "engagepath:weekly": "node datasource-generator/generate_weekly_digest.js --team engagepath --report weekly",
+    "timeclock:1on1": "node datasource-generator/generate_datasources.js --team timeclock --report 1on1",
+    "timeclock:team": "node datasource-generator/generate_team_datasource.js --team timeclock --report team",
+    "timeclock:weekly": "node datasource-generator/generate_weekly_digest.js --team timeclock --report weekly",
+  
 
     "list-reports": "node -e \"const fs=require('fs');const p='configs';let teams=[];if(fs.existsSync(p)){teams=fs.readdirSync(p,{withFileTypes:true}).filter(d=>d.isDirectory()&&d.name!=='shared').map(d=>d.name);}console.log('Available teams:',teams.join(', ')||'(none)');console.log('Report types: 1on1, team, weekly');\"",
     "rocks:clean": "node -e \"const fs=require('fs');const p='datasource-generator/output/rocks';fs.rmSync(p,{recursive:true,force:true});console.log('Cleaned '+p);\"",

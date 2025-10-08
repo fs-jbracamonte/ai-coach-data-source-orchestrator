@@ -1,0 +1,85 @@
+{
+    "projectFolder": "timeclock",
+    "mappings": {
+      "Jolony Tim Tangpuz": {
+        "shortName": "jolony",
+        "fullName": "Jolony Tim Tangpuz",
+        "aliases": [
+          "Jolony",
+          "Tangpuz",
+          "J. Tangpuz"
+        ]
+      },
+      "Jude Andy Convencido": {
+        "shortName": "jude",
+        "fullName": "Jude Andy Convencido",
+        "aliases": [
+          "Jude",
+          "Convencido",
+          "J. Convencido"
+        ]
+      },
+      "Harold Inacay": {
+        "shortName": "harold",
+        "fullName": "Harold Inacay",
+        "aliases": [
+          "Harold",
+          "Inacay"
+        ]
+      },
+      "Reymart Militante": {
+        "shortName": "reymart",
+        "fullName": "Reymart Militante",
+        "aliases": [
+          "Reymart",
+          "Militante"
+        ]
+      },
+      "Joshua Sacramento": {
+        "shortName": "joshua",
+        "fullName": "Joshua Sacramento",
+        "aliases": [
+          "Joshua",
+          "Sacramento",
+          "J. Sacramento"
+        ]
+      },
+      "Kentward Maratas": {
+        "shortName": "kentward",
+        "fullName": "Kentward Maratas",
+        "aliases": [
+          "Kentward",
+          "Maratas"
+        ]
+      },
+      "Ethan Patrick Bandebas": {
+        "shortName": "ethan",
+        "fullName": "Ethan Patrick Bandebas",
+        "aliases": [
+          "Ethan",
+          "Bandebas",
+          "E. Bandebas"
+        ]
+      },
+      "Mark Christian Nunez": {
+        "shortName": "mark",
+        "fullName": "Mark Christian Nunez",
+        "aliases": [
+          "Mark",
+          "Nunez",
+          "Mark Nunez"
+        ]
+      },
+      "Stephen James Del Rosario": {
+        "shortName": "stephen",
+        "fullName": "Stephen James Del Rosario",
+        "aliases": [
+          "Stephen Del Rosario",
+          "Stephen",
+          "Del Rosario"
+        ]
+      }
+    }
+  }
+  
+  

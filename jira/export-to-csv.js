@@ -14,58 +14,105 @@ function makeJiraRequest(path, callback) {
   
   // Get host from config instead of environment
   const jiraHost = config.jira.host.replace('https://', '').replace('http://', '').replace(/\/$/, '');
-  
-  const options = {
-    hostname: jiraHost,
-    path: path,
-    method: 'GET',
-    headers: {
-      'Authorization': `Basic ${auth}`,
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    }
+
+  const delays = [1000, 2000, 4000];
+
+  const attemptRequest = (attempt) => {
+    const options = {
+      hostname: jiraHost,
+      path: path,
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    };
+
+    console.log(`Making request to: https://${options.hostname}${options.path}`);
+
+    const req = https.request(options, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          callback(null, JSON.parse(data));
+        } else if (res.statusCode === 429 && attempt < delays.length) {
+          const delay = delays[attempt];
+          console.warn(`Received 429 Too Many Requests. Retrying in ${delay}ms (attempt ${attempt + 1} of ${delays.length}).`);
+          setTimeout(() => attemptRequest(attempt + 1), delay);
+        } else {
+          console.error(`Error: ${res.statusCode} ${res.statusMessage}`);
+          console.error('Response:', data);
+          callback(new JiraAPIError(`HTTP ${res.statusCode}: ${res.statusMessage}`, {
+            statusCode: res.statusCode,
+            host: options.hostname,
+            path: options.path,
+            response: data.substring(0, 500) // First 500 chars of response
+          }));
+        }
+      });
+    });
+
+    req.on('error', (error) => {
+      callback(new JiraAPIError(`Network error: ${error.message}`, {
+        host: options.hostname,
+        path: options.path,
+        originalError: error.message,
+        resolutionSteps: [
+          'Check your internet connection',
+          'Verify the Jira host is accessible',
+          'Check for firewall or proxy restrictions',
+          'Ensure the Jira instance URL is correct'
+        ]
+      }));
+    });
+
+    req.end();
   };
 
-  console.log(`Making request to: https://${options.hostname}${options.path}`);
+  attemptRequest(0);
+}
 
-  const req = https.request(options, (res) => {
-    let data = '';
+async function fetchAllComments(issueKey) {
+  const all = [];
+  let startAt = 0;
+  const maxResults = 100;
 
-    res.on('data', (chunk) => {
-      data += chunk;
+  while (true) {
+    const path = `/rest/api/3/issue/${encodeURIComponent(issueKey)}/comment?startAt=${startAt}&maxResults=${maxResults}`;
+    const page = await new Promise((resolve, reject) => {
+      makeJiraRequest(path, (err, data) => err ? reject(err) : resolve(data));
     });
+    const comments = Array.isArray(page.comments) ? page.comments : [];
+    all.push(...comments);
 
-    res.on('end', () => {
-      if (res.statusCode === 200) {
-        callback(null, JSON.parse(data));
-      } else {
-        console.error(`Error: ${res.statusCode} ${res.statusMessage}`);
-        console.error('Response:', data);
-        callback(new JiraAPIError(`HTTP ${res.statusCode}: ${res.statusMessage}`, {
-          statusCode: res.statusCode,
-          host: options.hostname,
-          path: options.path,
-          response: data.substring(0, 500) // First 500 chars of response
-        }));
-      }
-    });
+    const next = startAt + comments.length;
+    if (next >= (page.total || comments.length)) break;
+    startAt = next;
+  }
+  return all;
+}
+
+function parseIsoDate(value) {
+  const dt = new Date(value);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+function isWithinInclusiveRange(date, start, end) {
+  const t = date?.getTime?.();
+  return typeof t === 'number' && t >= start.getTime() && t <= end.getTime();
+}
+
+function filterCommentsByDateRange(comments, startDate, endDate) {
+  return comments.filter(c => {
+    const ts = parseIsoDate(c.updated || c.created);
+    return ts && isWithinInclusiveRange(ts, startDate, endDate);
   });
-
-  req.on('error', (error) => {
-    callback(new JiraAPIError(`Network error: ${error.message}`, {
-      host: options.hostname,
-      path: options.path,
-      originalError: error.message,
-      resolutionSteps: [
-        'Check your internet connection',
-        'Verify the Jira host is accessible',
-        'Check for firewall or proxy restrictions',
-        'Ensure the Jira instance URL is correct'
-      ]
-    }));
-  });
-
-  req.end();
 }
 
 // Function to make Jira API POST request (for new JQL search endpoint)
@@ -179,7 +226,7 @@ async function exportJiraData() {
 
   // Build JQL query
   const project = config.jira.project;
-  const jql = `project = ${project} AND updated >= "${config.jira.start_date}" AND updated <= "${config.jira.end_date}" ORDER BY updated DESC`;
+  const jql = `project = ${project} AND updated >= "${config.jira.start_date}" ORDER BY updated DESC`;
   console.log(`\nJQL Query: ${jql}\n`);
 
   let allIssues = [];
@@ -225,6 +272,30 @@ async function exportJiraData() {
     console.log('No issues found');
     return;
   }
+
+  const startDate = parseIsoDate(config.jira.start_date);
+  const endDate = parseIsoDate(config.jira.end_date);
+  if (!startDate || !endDate) {
+    throw new ConfigurationError('Invalid jira.start_date or jira.end_date', {
+      field: 'jira.start_date/end_date'
+    });
+  }
+
+  const filteredIssues = [];
+  console.log(`Fetching comments for ${allIssues.length} issues...`);
+  let i = 0;
+  for (const issue of allIssues) {
+    i++;
+    const comments = await fetchAllComments(issue.key);
+    const inRange = filterCommentsByDateRange(comments, startDate, endDate);
+    if (inRange.length > 0) {
+      issue.fields.comment = { comments: inRange };
+      filteredIssues.push(issue);
+    }
+    if (i % 10 === 0) console.log(`Processed ${i}/${allIssues.length} issues...`);
+  }
+  allIssues = filteredIssues;
+  console.log(`Kept ${allIssues.length} issues after comment-date filtering.`);
 
   // Convert to CSV
   console.log('\nConverting to CSV...');

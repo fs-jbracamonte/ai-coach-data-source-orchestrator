@@ -77,12 +77,18 @@ npm run jira:export
 
 This will run the query:
 ```
-project = {project} AND updated >= "{start_date}" AND updated <= "{end_date}" ORDER BY updated DESC
+project = {project} AND updated >= "{start_date}" ORDER BY updated DESC
 ```
 
 Where `{project}`, `{start_date}`, and `{end_date}` are taken from your config.json.
 
 The export will include ALL fields and save to `data/{project}_{start_date}_to_{end_date}_export.csv`
+
+### How filtering works
+
+- JQL now uses only `updated >= start_date` (no upper bound) to fetch candidate issues.
+- The exporter fetches comments for each returned issue and keeps only issues that have at least one comment whose `updated` timestamp (or `created` if `updated` is missing) falls within the inclusive range `[start_date, end_date]`.
+- Comments are retrieved using the Jira Cloud REST API v3 comments endpoint: [Jira Cloud REST API v3 – Issue comments](https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-comments#api-rest-api-3-issue-issueidorkey-comment-get).
 
 #### Split by Team Members
 ```bash
@@ -160,6 +166,25 @@ npm run jira:team-report
 The final markdown reports will be in the `md_output/` folder:
 - Team reports: `{project}_{date}_team_report.md`
 - Individual reports: One file per team member with their tickets organized by status
+
+### Epic Tree (weekly only)
+
+```bash
+npm run jira:epic-tree
+# Or directly: node jira/build-epic-tree.js
+```
+
+This will:
+- Ensure a recent export exists (reuses `{project}_{start}_to_{end}_export.csv`; triggers export if missing)
+- Seed from issues with comment activity in the configured date range
+- Resolve each seed issue's Epic
+- Fetch all direct children of those epics (parent = EPIC-KEY)
+- Optionally fetch subtasks of those children
+- Output consolidated markdown to `md_output/epic_tree_{project}_{start}_to_{end}.md`
+
+Notes:
+- Used by the weekly digest only; team and 1on1 flows are unchanged
+- Follows centralized config loading and error handling patterns
 
 ## Examples
 

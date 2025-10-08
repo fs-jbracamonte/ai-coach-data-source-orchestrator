@@ -148,6 +148,26 @@ class WeeklyDigestGenerator {
   }
 
   /**
+   * Get the most recent epic tree file
+   */
+  getEpicTreeFile() {
+    if (!fs.existsSync(this.jiraDir)) {
+      console.warn(`Jira output directory not found: ${this.jiraDir}`);
+      return null;
+    }
+
+    const files = fs.readdirSync(this.jiraDir)
+      .filter(file => /^epic_tree_.*_to_.*\.md$/.test(file))
+      .sort((a, b) => {
+        const statA = fs.statSync(path.join(this.jiraDir, a));
+        const statB = fs.statSync(path.join(this.jiraDir, b));
+        return statB.mtime - statA.mtime;
+      });
+
+    return files.length > 0 ? files[0] : null;
+  }
+
+  /**
    * Get all individual assignee markdown files from by-assignee directory
    */
   getIndividualAssigneeFiles() {
@@ -227,26 +247,37 @@ class WeeklyDigestGenerator {
   generateWeeklyDigest() {
     console.log(`\n=== Generating Weekly Digest for ${this.projectName} ===\n`);
 
-    // Get all individual assignee files
+    // Prefer Epic Tree (weekly-only) -> Team report -> Individual reports
+    const epicTreeFile = this.getEpicTreeFile();
+    const teamReportFile = this.getTeamReportFile();
     const assigneeFiles = this.getIndividualAssigneeFiles();
     let jiraContent = '';
-    
-    if (assigneeFiles.length > 0) {
+    let usedSource = 'none';
+
+    if (epicTreeFile) {
+      console.log(`Found epic tree: ${epicTreeFile}`);
+      jiraContent = this.readFileContent(path.join(this.jiraDir, epicTreeFile));
+      usedSource = 'epic-tree';
+    } else if (teamReportFile) {
+      console.log(`Found team report: ${teamReportFile}`);
+      jiraContent = this.readFileContent(path.join(this.jiraDir, teamReportFile));
+      usedSource = 'team-report';
+    } else if (assigneeFiles.length > 0) {
       console.log(`Found ${assigneeFiles.length} individual assignee reports`);
-      
+
       // Create a header for the combined JIRA content
       jiraContent = `# JIRA Reports - ${this.projectName}\n\n`;
       jiraContent += `**Project**: ${this.projectName}\n`;
       jiraContent += `**Date Range**: ${config.jira?.start_date || 'N/A'} to ${config.jira?.end_date || 'N/A'}\n`;
       jiraContent += `**Generated**: ${new Date().toLocaleString()}\n\n`;
-      
+
       // Combine all individual assignee reports
       assigneeFiles.forEach((file, index) => {
         const content = this.readFileContent(path.join(this.jiraDir, 'by-assignee', file));
         if (content) {
-          // Extract assignee name from filename (format: ROCKS_2025-09-22_to_2025-09-26_FirstName_LastName.md)
+          // Extract assignee name from filename (format: ROCKS_2025-09-22_to-2025-09-26_FirstName_LastName.md)
           const assigneeName = file.replace(/^.*?_to_.*?_(.+)\.md$/, '$1').replace(/_/g, ' ');
-          
+
           jiraContent += `## ${assigneeName}\n\n`;
           jiraContent += content;
           if (index < assigneeFiles.length - 1) {
@@ -254,8 +285,9 @@ class WeeklyDigestGenerator {
           }
         }
       });
+      usedSource = 'by-assignee';
     } else {
-      console.warn('No individual assignee reports found');
+      console.warn('No JIRA team report or individual assignee reports found');
     }
 
     // Get all daily report files
@@ -289,6 +321,138 @@ class WeeklyDigestGenerator {
         transcriptContent += '\n\n---\n\n';
       }
     });
+
+    // ---- Prepend computed summaries to each section ----
+    function summarizeJira(content, source) {
+      // Epic tree parser
+      function parseEpicTree() {
+        const keyRegex = /\[([A-Z]+-\d+)\]/g;
+        const uniqueKeys = new Set();
+        let m;
+        while ((m = keyRegex.exec(content)) !== null) uniqueKeys.add(m[1]);
+        const total = uniqueKeys.size;
+
+        const byAssignee = {};
+        content.split('\n').forEach(line => {
+          const m1 = line.match(/\*\*Assignee\*\*:\s*(.+)$/) || line.match(/Assignee:\s*(.+)$/);
+          if (m1) {
+            const name = m1[1].trim();
+            if (name) byAssignee[name] = (byAssignee[name] || 0) + 1;
+          }
+        });
+
+        const byStatus = {};
+        content.split('\n').forEach(line => {
+          const m1 = line.match(/\*\*Status\*\*:\s*(.+)$/) || line.match(/Status:\s*(.+)$/);
+          if (m1) {
+            const status = m1[1].trim();
+            if (status) byStatus[status] = (byStatus[status] || 0) + 1;
+          }
+        });
+        return { total, byStatus, byAssignee };
+      }
+
+      // Team report parser
+      function parseTeamReport() {
+        const byStatus = {};
+        content.split('\n').forEach(line => {
+          const m = line.match(/^###\s+([^()]+)\s+\((\d+)\)/);
+          if (m) byStatus[m[1].trim()] = parseInt(m[2], 10);
+        });
+        const totalMatch = content.match(/\*\*Total Tickets\*\*:\s*(\d+)/);
+        let total = totalMatch ? parseInt(totalMatch[1], 10) : null;
+
+        // By assignee from Team Member Details section
+        const byAssignee = {};
+        let inSection = false;
+        content.split('\n').forEach(line => {
+          if (line.trim() === '## Team Member Details') { inSection = true; return; }
+          if (inSection && line.startsWith('## ')) { inSection = false; return; }
+          if (inSection) {
+            const m = line.trim().match(/^###\s+(.+?)\s+\((\d+) tickets\)/);
+            if (m) byAssignee[m[1].trim()] = parseInt(m[2], 10);
+          }
+        });
+        if (total == null) {
+          const keyRegex = /\[([A-Z]+-\d+)\]/g;
+          const uniqueKeys = new Set();
+          let m;
+          while ((m = keyRegex.exec(content)) !== null) uniqueKeys.add(m[1]);
+          total = uniqueKeys.size;
+        }
+        return { total, byStatus, byAssignee };
+      }
+
+      // Individual combined parser
+      function parseIndividuals() {
+        const byAssignee = {};
+        let current = null;
+        content.split('\n').forEach(line => {
+          if (line.startsWith('## ') && !line.startsWith('## Tickets by Status')) {
+            current = line.replace(/^##\s+/, '').trim();
+            if (current) byAssignee[current] = 0;
+          } else if (current && /\[([A-Z]+-\d+)\]/.test(line)) {
+            byAssignee[current] += 1;
+          }
+        });
+        const keyRegex = /\[([A-Z]+-\d+)\]/g;
+        const uniqueKeys = new Set();
+        let m;
+        while ((m = keyRegex.exec(content)) !== null) uniqueKeys.add(m[1]);
+        return { total: uniqueKeys.size, byStatus: {}, byAssignee };
+      }
+
+      let summary;
+      if (source === 'epic-tree') summary = parseEpicTree();
+      else if (source === 'team-report') summary = parseTeamReport();
+      else summary = parseIndividuals();
+
+      let header = '## JIRA Summary\n\n';
+      header += `**Total Tickets**: ${summary.total}  \n\n`;
+      if (Object.keys(summary.byStatus).length) {
+        header += '### By Status\n';
+        Object.entries(summary.byStatus).forEach(([k, v]) => { header += `- **${k}**: ${v}\n`; });
+        header += '\n';
+      }
+      if (Object.keys(summary.byAssignee).length) {
+        header += '### By Assignee\n';
+        Object.entries(summary.byAssignee).forEach(([k, v]) => { header += `- **${k}**: ${v}\n`; });
+        header += '\n';
+      }
+      return header + '---\n\n' + content;
+    }
+
+    function summarizeDaily(content) {
+      const totalReports = (content.match(/# Daily Report:/g) || []).length;
+      const employees = new Set();
+      const empRegex = /\*\*Employee\*\*:\s*([^\n]+)/g;
+      let m;
+      while ((m = empRegex.exec(content)) !== null) employees.add(m[1].trim());
+      const dateRegex = /^##\s+(\d{4}-\d{2}-\d{2})/gm;
+      const dates = [];
+      let d;
+      while ((d = dateRegex.exec(content)) !== null) dates.push(d[1]);
+      const start = dates.length ? dates.slice().sort()[0] : null;
+      const end = dates.length ? dates.slice().sort()[dates.length - 1] : null;
+      let header = '## Daily Reports Summary\n\n';
+      header += `**Total Reports**: ${totalReports}  \n`;
+      header += `**Unique Employees**: ${employees.size}  \n`;
+      if (start && end) header += `**Date Range**: ${start} to ${end}  \n`;
+      header += '\n---\n\n';
+      return header + content;
+    }
+
+    function summarizeTranscripts(content) {
+      const count = (content.match(/# Transcript:/g) || []).length;
+      let header = '## Transcripts Summary\n\n';
+      header += `**Total Transcripts**: ${count}  \n\n`;
+      header += '---\n\n';
+      return header + content;
+    }
+
+    jiraContent = summarizeJira(jiraContent, usedSource);
+    dailyReportContent = summarizeDaily(dailyReportContent);
+    transcriptContent = summarizeTranscripts(transcriptContent);
 
     // Create the Python datasource file
     let pythonContent = '';
@@ -324,46 +488,86 @@ class WeeklyDigestGenerator {
     }
 
 def get_jira_summary():
-    """Extracts summary statistics from JIRA data."""
+    """Extracts summary statistics from JIRA data.
+    Supports Epic Tree (preferred), Team report, and Individual formats.
+    """
     import re
     
-    # Count total tickets across all assignees
-    ticket_pattern = r'\\[([A-Z]+-\\d+)\\]'
-    all_tickets = set(re.findall(ticket_pattern, JIRA_DATA))
-    
-    # Count tickets by status
-    status_counts = {}
-    current_status = None
-    
-    for line in JIRA_DATA.split('\\n'):
-        # Look for status headers like "### In Progress (1)"
-        status_match = re.match(r'### ([^(]+) \\((\\d+)\\)', line)
-        if status_match:
-            current_status = status_match.group(1).strip()
-            if current_status not in status_counts:
-                status_counts[current_status] = 0
-        # Count tickets under each status
-        elif current_status and re.match(r'\\[([A-Z]+-\\d+)\\]', line):
-            status_counts[current_status] += 1
-    
-    # Count tickets by assignee
-    assignee_counts = {}
-    current_assignee = None
-    
-    for line in JIRA_DATA.split('\\n'):
-        # Look for assignee headers
-        if line.startswith('## ') and not line.startswith('## Tickets by Status'):
-            current_assignee = line.replace('## ', '').strip()
-            assignee_counts[current_assignee] = 0
-        # Count tickets for current assignee
-        elif current_assignee and re.match(r'\\[([A-Z]+-\\d+)\\]', line):
-            assignee_counts[current_assignee] += 1
-    
-    return {
-        "total_tickets": len(all_tickets),
-        "by_status": status_counts,
-        "by_assignee": assignee_counts
-    }
+    def is_epic_tree():
+        return '# Epic Tree' in JIRA_DATA
+
+    def parse_epic_tree():
+        keys = re.findall(r'\\[([A-Z]+-\\d+)\\]', JIRA_DATA)
+        total = len(set(keys))
+        by_assignee = {}
+        for line in JIRA_DATA.split('\\n'):
+            m = re.search(r'(\\*\\*Assignee\\*\\*:\\s*|Assignee:\\s*)(.+)$', line.strip())
+            if m:
+                name = m.group(2).strip()
+                if name:
+                    by_assignee[name] = by_assignee.get(name, 0) + 1
+        by_status = {}
+        for line in JIRA_DATA.split('\\n'):
+            m = re.search(r'(\\*\\*Status\\*\\*:\\s*|Status:\\s*)(.+)$', line.strip())
+            if m:
+                status = m.group(2).strip()
+                if status:
+                    by_status[status] = by_status.get(status, 0) + 1
+        return total, by_status, by_assignee
+
+    def parse_team_report():
+        def parse_status_counts():
+            counts = {}
+            for line in JIRA_DATA.split('\\n'):
+                m = re.match(r'### ([^(]+) \\((\\d+)\\)', line)
+                if m:
+                    counts[m.group(1).strip()] = int(m.group(2))
+            return counts
+        def parse_total_from_team():
+            m = re.search(r'\\*\\*Total Tickets\\*\\*: (\\d+)', JIRA_DATA)
+            return int(m.group(1)) if m else None
+        def parse_assignee_counts_from_team_details():
+            counts = {}
+            in_section = False
+            for line in JIRA_DATA.split('\\n'):
+                if line.strip() == '## Team Member Details':
+                    in_section = True
+                    continue
+                if in_section and line.startswith('## '):
+                    break
+                if in_section:
+                    m = re.match(r'### (.+?) \\((\\d+) tickets\\)', line.strip())
+                    if m:
+                        counts[m.group(1).strip()] = int(m.group(2))
+            return counts
+        status_counts = parse_status_counts()
+        total = parse_total_from_team()
+        if total is None:
+            all_keys = set(re.findall(r'\\[([A-Z]+-\\d+)\\]', JIRA_DATA))
+            total = len(all_keys)
+        assignee_counts = parse_assignee_counts_from_team_details()
+        return total, status_counts, assignee_counts
+
+    def parse_individuals():
+        counts = {}
+        current_assignee = None
+        for line in JIRA_DATA.split('\\n'):
+            if line.startswith('## ') and not line.startswith('## Tickets by Status'):
+                current_assignee = line.replace('## ', '').strip()
+                counts[current_assignee] = 0
+            elif current_assignee and re.match(r'\\[([A-Z]+-\\d+)\\]', line):
+                counts[current_assignee] += 1
+        all_keys = set(re.findall(r'\\[([A-Z]+-\\d+)\\]', JIRA_DATA))
+        return len(all_keys), {}, counts
+
+    if is_epic_tree():
+        total, by_status, by_assignee = parse_epic_tree()
+        return {"total_tickets": total, "by_status": by_status, "by_assignee": by_assignee}
+
+    total, by_status, by_assignee = parse_team_report()
+    if not by_assignee:
+        total, by_status, by_assignee = parse_individuals()
+    return {"total_tickets": total, "by_status": by_status, "by_assignee": by_assignee}
 
 def get_daily_reports_summary():
     """Returns summary of daily reports included."""
@@ -457,7 +661,8 @@ def get_employee_reports(employee_name):
     // Print summary
     console.log('\nSummary:');
     console.log(`- Project: ${this.projectName}`);
-    console.log(`- JIRA individual reports: ${assigneeFiles.length} assignees included`);
+    const jiraSourceLabel = usedSource === 'epic-tree' ? 'Epic tree included' : usedSource === 'team-report' ? 'Team report included' : usedSource === 'by-assignee' ? `${assigneeFiles.length} individual reports` : 'None';
+    console.log(`- JIRA content: ${jiraSourceLabel}`);
     console.log(`- Daily reports: ${dailyReportFiles.length} files included`);
     console.log(`- Transcripts: ${transcriptFiles.length} files included`);
     console.log(`- Output file: ${outputFileName}`);
@@ -474,9 +679,20 @@ def get_employee_reports(employee_name):
       console.log('=== Step 1: Generating daily reports ===');
       await this.runCommand('npm', ['run', 'daily:all']);
 
-      // Step 2: Run jira:all (individual reports)
-      console.log('\n=== Step 2: Generating individual JIRA reports ===');
-      await this.runCommand('npm', ['run', 'jira:all']);
+      // Step 2: Generate JIRA team report (all board tickets)
+      console.log('\n=== Step 2: Generating JIRA team report (all tickets) ===');
+      await this.runCommand('npm', ['run', 'jira:team-all']);
+
+      // Optional fallback: if team report was not produced, generate individual reports
+      const maybeTeamReport = this.getTeamReportFile();
+      if (!maybeTeamReport) {
+        console.warn('\nTeam report not found, falling back to individual JIRA reports...');
+        await this.runCommand('npm', ['run', 'jira:all']);
+      }
+
+      // Step 2.5: Build Epic Tree (weekly-only consolidation)
+      console.log('\n=== Step 2.5: Building JIRA Epic Tree (weekly only) ===');
+      await this.runCommand('npm', ['run', 'jira:epic-tree']);
 
       // Step 3: Run transcripts:download
       console.log('\n=== Step 3: Downloading transcripts ===');

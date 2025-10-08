@@ -20,6 +20,7 @@
     "jira:team-report": "node jira/team-report.js",
     "jira:team-all": "node jira/run-team-report.js",
     "jira:all": "node jira/run-all.js",
+    "jira:epic-tree": "node jira/build-epic-tree.js",
     "transcripts:download": "node transcripts/download-from-drive.js",
     "transcripts:test-convert": "node test/test-transcript-conversion.js",
     "daily:query": "node daily-reports/db-query.js",

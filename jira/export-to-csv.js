@@ -7,6 +7,7 @@ require('dotenv').config();
 const config = require('../lib/config').load();
 const { JiraAPIError, ConfigurationError, FileSystemError } = require('../lib/errors');
 const { handleError } = require('../lib/error-handler');
+const enrichWithChangelog = require('./enrich-with-changelog');
 
 // Function to make Jira API request (GET)
 function makeJiraRequest(path, callback) {
@@ -296,6 +297,15 @@ async function exportJiraData() {
   }
   allIssues = filteredIssues;
   console.log(`Kept ${allIssues.length} issues after comment-date filtering.`);
+
+  // Enrich with changelogs (non-fatal on errors). This populates on-disk cache for markdown steps.
+  try {
+    const simpleList = allIssues.map(it => ({ key: it.key }));
+    await enrichWithChangelog(simpleList);
+    console.log(`Enriched changelogs for ${simpleList.length} issues (cached to jira/data/changelogs).`);
+  } catch (e) {
+    handleError(e, { module: 'jira', operation: 'enrich-with-changelog', configFile: process.env.CONFIG_FILE || 'config.json' }, { exit: false });
+  }
 
   // Convert to CSV
   console.log('\nConverting to CSV...');

@@ -157,7 +157,7 @@ class WeeklyDigestGenerator {
     }
 
     const files = fs.readdirSync(this.jiraDir)
-      .filter(file => /^epic_tree_.*_to_.*\.md$/.test(file))
+      .filter(file => /^(epic_tree_|epic_tree_with_changelog_).*_to_.*\.md$/.test(file))
       .sort((a, b) => {
         const statA = fs.statSync(path.join(this.jiraDir, a));
         const statB = fs.statSync(path.join(this.jiraDir, b));
@@ -242,6 +242,23 @@ class WeeklyDigestGenerator {
   }
 
   /**
+   * Convert plain Jira issue keys like [ABC-123] into clickable links
+   * while avoiding already-linked patterns like [ABC-123](...)
+   */
+  linkifyIssueKeys(content) {
+    try {
+      const host = config?.jira?.host ? String(config.jira.host) : '';
+      if (!host) return content;
+      const jiraHost = host.replace(/^https?:\/\//, '').replace(/\/$/, '');
+      const base = `https://${jiraHost}`;
+      // Match [ABC-123] not already followed by '(' (i.e., not already a link)
+      return content.replace(/(^|[^!])\[([A-Z][A-Z0-9]+-\d+)\](?!\()/g, (m, prefix, key) => `${prefix}[${key}](${base}/browse/${key})`);
+    } catch (_) {
+      return content;
+    }
+  }
+
+  /**
    * Generate the weekly digest datasource file
    */
   generateWeeklyDigest() {
@@ -255,7 +272,8 @@ class WeeklyDigestGenerator {
     let usedSource = 'none';
 
     if (epicTreeFile) {
-      console.log(`Found epic tree: ${epicTreeFile}`);
+      const isEnriched = epicTreeFile.startsWith('epic_tree_with_changelog_');
+      console.log(`Found epic tree${isEnriched ? ' (enriched)' : ''}: ${epicTreeFile}`);
       jiraContent = this.readFileContent(path.join(this.jiraDir, epicTreeFile));
       usedSource = 'epic-tree';
     } else if (teamReportFile) {
@@ -289,6 +307,9 @@ class WeeklyDigestGenerator {
     } else {
       console.warn('No JIRA team report or individual assignee reports found');
     }
+
+    // Ensure issue keys inside the JIRA content are clickable links
+    jiraContent = this.linkifyIssueKeys(jiraContent);
 
     // Get all daily report files
     const dailyReportFiles = this.getDailyReportFiles();
@@ -655,6 +676,12 @@ def get_employee_reports(employee_name):
     const outputFileName = `datasource_weekly_${this.projectName.toLowerCase()}.py`;
     const outputPath = path.join(this.outputDir, outputFileName);
     
+    // Strip embedded Python helpers to keep data-only output
+    const helperMarker = 'def get_weekly_digest_data():';
+    const markerIndex = pythonContent.indexOf(helperMarker);
+    if (markerIndex !== -1) {
+      pythonContent = pythonContent.slice(0, markerIndex);
+    }
     fs.writeFileSync(outputPath, pythonContent);
     console.log(`\n✓ Generated weekly digest datasource: ${outputPath}`);
     
@@ -666,6 +693,19 @@ def get_employee_reports(employee_name):
     console.log(`- Daily reports: ${dailyReportFiles.length} files included`);
     console.log(`- Transcripts: ${transcriptFiles.length} files included`);
     console.log(`- Output file: ${outputFileName}`);
+    // Token estimates (roughly 4 chars per token)
+    function estimateTokens(charCount) { return Math.ceil((charCount || 0) / 4); }
+    const jiraChars = jiraContent.length;
+    const dailyChars = dailyReportContent.length;
+    const transcriptChars = transcriptContent.length;
+    const jiraTokens = estimateTokens(jiraChars);
+    const dailyTokens = estimateTokens(dailyChars);
+    const transcriptTokens = estimateTokens(transcriptChars);
+    console.log('- Token estimates (approx):');
+    console.log(`  JIRA_DATA: ${jiraChars} chars ≈ ${jiraTokens} tokens`);
+    console.log(`  DAILY_REPORTS_DATA: ${dailyChars} chars ≈ ${dailyTokens} tokens`);
+    console.log(`  TRANSCRIPT_DATA: ${transcriptChars} chars ≈ ${transcriptTokens} tokens`);
+    console.log(`  Total: ≈ ${jiraTokens + dailyTokens + transcriptTokens} tokens`);
   }
 
   /**
@@ -693,6 +733,10 @@ def get_employee_reports(employee_name):
       // Step 2.5: Build Epic Tree (weekly-only consolidation)
       console.log('\n=== Step 2.5: Building JIRA Epic Tree (weekly only) ===');
       await this.runCommand('npm', ['run', 'jira:epic-tree']);
+
+      // Step 2.6: Append changelogs to Epic Tree
+      console.log('\n=== Step 2.6: Appending changelogs to Epic Tree ===');
+      await this.runCommand('node', ['jira/append-changelog-to-epic-tree.js']);
 
       // Step 3: Run transcripts:download
       console.log('\n=== Step 3: Downloading transcripts ===');

@@ -5,6 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "npm run test:name-matcher && npm run test:error-handling && npm run test:date-extraction && npm run test:content-search",
+    "test:changelog-flatten": "node test/test-changelog-flatten.js",
+    "test:jira-changelog-client": "node test/test-jira-changelog-client.js",
+    "test:changelog-integration": "node test/test-changelog-integration.js",
+    "test:changelog": "npm run test:changelog-flatten && npm run test:jira-changelog-client && npm run test:changelog-integration",
     "test:name-matcher": "node test/test-name-matcher.js",
     "test:error-handling": "node test/test-error-handling.js",
     "test:transcript-conversion": "node test/test-transcript-conversion.js",

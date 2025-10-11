@@ -66,7 +66,30 @@ data-source-orchestrator/
 
 3. **Set Up Each Module**
    - **Daily Reports**: See [daily-reports/README.md](daily-reports/README.md)
+     - Optional one-off override: when a specific employee’s reports live under a different `client_project_id`, add `employeeProjectOverrides` to your config under `dailyReports.query`.
+       Example:
+       ```json
+       {
+         "dailyReports": {
+           "query": {
+             "client_project_id": 531,
+             "employee_id": "",
+             "report_date_start": "2025-09-22",
+             "report_date_end": "2025-10-05",
+             "employeeProjectOverrides": [
+               { "employee_id": 22375, "client_project_ids": 540 }
+             ]
+           }
+         }
+       }
+       ```
+       This includes rows from the base project (531) and, for employee 22375, also from project 540.
    - **Jira Integration**: See [jira/README.md](jira/README.md)
+     - Changelog sections are included by default in per-assignee and team reports. Entries are concise one-liners, e.g.:
+       - `- 2025-08-15 00:14 • Ismael Jr. Cristal • status: Backlog → In Progress`
+       - `- 2025-08-27 16:15 • Crystal Selina Bandalan • Sprint: +Proposed Sprint 6 -MVP Sprint 5`
+       - `- 2025-08-07 21:00 • cleo • description: [updated; 1,234 chars]`
+     - Weekly digest prefers `epic_tree_with_changelog_*.md` when available.
    - **Transcript Processing**: See [transcripts/SETUP_GOOGLE_DRIVE.md](transcripts/SETUP_GOOGLE_DRIVE.md)
 
 ## Configuration Structure

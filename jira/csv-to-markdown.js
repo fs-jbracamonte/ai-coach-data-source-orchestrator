@@ -5,6 +5,7 @@ require('dotenv').config();
 
 // Load config
 const config = require('../lib/config').load();
+const { getChangelogBullets } = require('./lib/changelog-markdown');
 
 /**
  * Parse complex JSON fields from Jira export
@@ -214,6 +215,13 @@ function formatTicket(ticket) {
     { label: 'Updated', value: formatDate(ticket['Updated']) }
   ].filter(item => item.value && item.value.trim() !== '');
   
+  // Add Issue URL if host configured and issue key present
+  const jiraHost = (config && config.jira && config.jira.host) ? String(config.jira.host).replace(/^https?:\/\//, '').replace(/\/$/, '') : '';
+  if (jiraHost && issueKey && issueKey !== 'N/A') {
+    const issueUrl = `https://${jiraHost}/browse/${issueKey}`;
+    keyInfo.unshift({ label: 'Issue URL', value: `[${issueKey}](${issueUrl})` });
+  }
+
   if (keyInfo.length > 0) {
     keyInfo.forEach(info => {
       markdown += `**${info.label}**: ${info.value}  \n`;
@@ -301,7 +309,20 @@ function formatTicket(ticket) {
   
   // Parent ticket info (for sub-tasks)
   if (ticket['Parent key'] && ticket['Parent summary']) {
-    markdown += `**Parent**: [${ticket['Parent key']}] ${ticket['Parent summary']}\n\n`;
+    if (jiraHost) {
+      markdown += `**Parent**: [${ticket['Parent key']}](${`https://${jiraHost}/browse/${ticket['Parent key']}`}) ${ticket['Parent summary']}\n\n`;
+    } else {
+      markdown += `**Parent**: [${ticket['Parent key']}] ${ticket['Parent summary']}\n\n`;
+    }
+  }
+
+  // Changelog (compact bullets from cache)
+  const keyForChangelog = ticket['Issue key'] || ticket.key;
+  const bullets = keyForChangelog ? getChangelogBullets(keyForChangelog) : [];
+  if (bullets.length > 0) {
+    markdown += `#### Changelog\n\n`;
+    bullets.forEach(b => { markdown += `${b}\n`; });
+    markdown += `\n`;
   }
   
   markdown += `---\n\n`;

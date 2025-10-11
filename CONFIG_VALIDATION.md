@@ -53,6 +53,17 @@ If included, all fields are **required**:
 - `dailyReports.query.report_date_start` - String in YYYY-MM-DD format
 - `dailyReports.query.report_date_end` - String in YYYY-MM-DD format
 
+Optional fields:
+- `dailyReports.query.employeeProjectOverrides` - One-off per-employee project overrides
+  - Use when a specific employee's daily reports are stored under a different `client_project_id`
+  - Format:
+```json
+"employeeProjectOverrides": [
+  { "employee_id": 12345, "client_project_ids": [999, 1001] }
+]
+```
+  - Behavior: Query includes the base `client_project_id` OR any of the override project IDs for the matching employee(s)
+
 ### Jira Section (Optional)
 If included, required fields are:
 - `jira.project` - String, project key (uppercase)

@@ -554,6 +554,7 @@ async function main() {
 
   // Ensure CSV export exists and read seeds
   const csvPath = await ensureExportAndGetCsvPath();
+  console.log(`[epic-tree] Reading seed issue keys from: ${csvPath}`);
   const seedKeys = await readSeedIssueKeys(csvPath);
   if (seedKeys.length === 0) {
     console.warn('[epic-tree] No seed issues found in export CSV (comment-date filtered).');
@@ -562,10 +563,15 @@ async function main() {
   // Resolve epics
   const epicKeySet = new Set();
   const noEpicSeeds = new Set();
+  let resolvedCount = 0;
   for (const seed of seedKeys) {
     const epic = await resolveEpicKeyForSeed(seed);
     if (epic) epicKeySet.add(epic);
     else noEpicSeeds.add(seed);
+    resolvedCount++;
+    if (resolvedCount === 1 || resolvedCount % 20 === 0 || resolvedCount === seedKeys.length) {
+      console.log(`[epic-tree] Resolved epics for ${resolvedCount}/${seedKeys.length} seeds...`);
+    }
   }
   const epicKeys = Array.from(epicKeySet);
   console.log(`[epic-tree] Resolved ${epicKeys.length} epic(s).`);
@@ -589,7 +595,10 @@ async function main() {
   }
 
   // For each epic: fetch epic details, children, and subtasks
+  let epicIndex = 0;
   for (const epicKey of epicKeys) {
+    epicIndex++;
+    console.log(`[epic-tree] Processing epic ${epicIndex}/${epicKeys.length}: ${epicKey}`);
     let epicIssue;
     try {
       epicIssue = await getIssueDetails(epicKey);
@@ -601,14 +610,20 @@ async function main() {
     let children = [];
     try {
       children = await fetchEpicChildren(epicKey);
+      console.log(`[epic-tree] -> Fetched ${children.length} child issue(s) for ${epicKey}`);
     } catch (e) {
       console.warn(`[epic-tree] Failed to fetch children for ${epicKey}: ${e.message}`);
     }
 
     // Fetch comments for children
+    let childIdx = 0;
     for (const child of children) {
+      childIdx++;
       try {
         child._epicTreeComments = await fetchAllComments(child.key);
+        if (childIdx % 10 === 0 || childIdx === children.length) {
+          console.log(`[epic-tree] -> Comments fetched for ${childIdx}/${children.length} children...`);
+        }
       } catch (e) {
         child._epicTreeComments = [];
       }
@@ -618,6 +633,7 @@ async function main() {
     try {
       const childKeys = children.map(c => c.key);
       subtasks = await fetchSubtasksForParents(childKeys);
+      console.log(`[epic-tree] -> Fetched ${subtasks.length} subtasks across ${childKeys.length} children`);
     } catch (e) {
       console.warn(`[epic-tree] Failed to fetch subtasks for epic ${epicKey}: ${e.message}`);
     }
@@ -634,11 +650,16 @@ async function main() {
 
     // Fetch comments for subtasks
     for (const [pKey, list] of subtasksByParent.entries()) {
+      let stIdx = 0;
       for (const st of list) {
+        stIdx++;
         try {
           st._epicTreeComments = await fetchAllComments(st.key);
         } catch (e) {
           st._epicTreeComments = [];
+        }
+        if (stIdx % 20 === 0 || stIdx === list.length) {
+          console.log(`[epic-tree] -> Comments fetched for ${stIdx}/${list.length} subtasks under ${pKey}`);
         }
       }
     }
@@ -672,5 +693,6 @@ main().catch(err => {
     configFile: process.env.CONFIG_FILE || 'config.json'
   });
 });
+
 
 

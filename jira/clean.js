@@ -43,6 +43,24 @@ for (const dir of dirsToClean) {
   totalDeleted += deletedCount;
 }
 
+// Remove changelog cache folders (JSON files), if present
+const changelogDirs = [
+  path.join(__dirname, 'data', 'changelogs'),
+  path.join(__dirname, 'data', 'by-assignee', 'changelogs')
+];
+
+for (const cdir of changelogDirs) {
+  try {
+    if (fs.existsSync(cdir)) {
+      console.log(`Removing changelog cache: ${path.relative(__dirname, cdir)}/`);
+      fs.rmSync(cdir, { recursive: true, force: true });
+      console.log('  ✓ Removed changelog cache folder\n');
+    }
+  } catch (error) {
+    console.error(`  ✗ Error removing ${cdir}: ${error.message}`);
+  }
+}
+
 console.log(`\nTotal files removed: ${totalDeleted}`);
 
 if (totalDeleted === 0) {

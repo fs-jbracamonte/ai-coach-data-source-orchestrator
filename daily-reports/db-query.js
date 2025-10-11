@@ -253,7 +253,61 @@ async function main() {
     }
     
     const hasEmployeeIds = employeeIds.length > 0;
-    
+
+    // Build optional per-employee project overrides map from config
+    const overridesConfig = (config.dailyReports.query.employeeProjectOverrides || []).map(o => ({
+      employee_id: typeof o.employee_id === 'string' ? parseInt(o.employee_id, 10) : o.employee_id,
+      client_project_ids: Array.isArray(o.client_project_ids) ? o.client_project_ids : [o.client_project_ids]
+    }));
+
+    const hasOverrides = overridesConfig.length > 0;
+
+    // Construct WHERE clause dynamically to support overrides
+    const baseProjectId = config.dailyReports.query.client_project_id;
+    let whereClauses = [
+      'er.report_template_id = ?',
+      'er.report_date BETWEEN ? AND ?'
+    ];
+
+    // Employee filter if provided
+    if (hasEmployeeIds) {
+      whereClauses.push(`er.employee_id IN (${employeeIds.map(() => '?').join(',')})`);
+    }
+
+    // Project filter: either simple equality or (base OR any overrides per employee)
+    let projectFilterSql = 'er.client_project_id = ?';
+    const params = [
+      1, // report_template_id fixed
+      config.dailyReports.query.report_date_start,
+      config.dailyReports.query.report_date_end
+    ];
+
+    if (hasEmployeeIds) {
+      params.push(...employeeIds);
+    }
+
+    if (!hasOverrides) {
+      // Simple case: single project
+      params.unshift(baseProjectId); // place before report_template_id
+    } else {
+      // Advanced case: allow base project or per-employee overrides
+      // Build an OR group like:
+      // (er.client_project_id = ? OR (er.employee_id = ? AND er.client_project_id IN (?,...)) OR ...)
+      const orParts = ['er.client_project_id = ?'];
+      let overrideParams = [baseProjectId];
+
+      for (const ov of overridesConfig) {
+        if (!ov || !ov.employee_id || !ov.client_project_ids || ov.client_project_ids.length === 0) continue;
+        orParts.push(`(er.employee_id = ? AND er.client_project_id IN (${ov.client_project_ids.map(() => '?').join(',')}))`);
+        overrideParams.push(ov.employee_id, ...ov.client_project_ids);
+      }
+
+      projectFilterSql = `(${orParts.join(' OR ')})`;
+      // Insert project/override params at the beginning so order matches placeholders
+      params.unshift(...overrideParams);
+    }
+
+    // Final SQL
     const query = `
       SELECT 
           e.id AS employee_id, 
@@ -274,29 +328,20 @@ async function main() {
       INNER JOIN  
           client_projects AS cp ON er.client_project_id = cp.id
       WHERE 
-          client_project_id = ?
-          AND er.report_template_id = ?
-          AND er.report_date BETWEEN ? AND ?
-          ${hasEmployeeIds ? `AND er.employee_id IN (${employeeIds.map(() => '?').join(',')})` : ''}
+          ${projectFilterSql}
+          AND ${whereClauses.join(' AND ')}
       ORDER BY 
           er.employee_id, er.report_date DESC
     `;
     
-    // Get parameters from config
-    const params = [
-      config.dailyReports.query.client_project_id,
-      1,  // report_template_id is always 1
-      config.dailyReports.query.report_date_start,
-      config.dailyReports.query.report_date_end
-    ];
-    
-    // Add employee IDs to params if they exist
-    if (hasEmployeeIds) {
-      params.push(...employeeIds);
-    }
-    
     console.log('\nQuery Parameters:');
     console.log(`  Client Project ID: ${config.dailyReports.query.client_project_id}`);
+    if (hasOverrides) {
+      console.log(`  Overrides:`);
+      overridesConfig.forEach(ov => {
+        console.log(`    - employee_id ${ov.employee_id} -> project_ids [${ov.client_project_ids.join(', ')}]`);
+      });
+    }
     console.log(`  Employee ID(s): ${hasEmployeeIds ? employeeIds.join(', ') : 'ALL EMPLOYEES'}`);
     console.log(`  Date Range: ${config.dailyReports.query.report_date_start} to ${config.dailyReports.query.report_date_end}`);
     console.log(`  Report Template ID: 1 (fixed)`);

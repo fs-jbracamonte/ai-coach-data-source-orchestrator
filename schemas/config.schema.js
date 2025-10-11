@@ -79,7 +79,41 @@ const configSchema = Joi.object({
       
       report_date_end: dateSchema.required().messages({
         'any.required': 'dailyReports.query.report_date_end is required\n  Example: "report_date_end": "2025-01-31"'
-      })
+      }),
+
+      // Optional: one-off overrides allowing specific employees to pull reports from
+      // different client_project_ids in addition to the base client_project_id.
+      // Format:
+      //   "employeeProjectOverrides": [
+      //     { "employee_id": 12345, "client_project_ids": [999, 1001] }
+      //   ]
+      employeeProjectOverrides: Joi.array()
+        .items(
+          Joi.object({
+            employee_id: Joi.number().integer().positive().required().messages({
+              'number.base': 'employeeProjectOverrides.employee_id must be a number',
+              'number.integer': 'employeeProjectOverrides.employee_id must be an integer',
+              'number.positive': 'employeeProjectOverrides.employee_id must be a positive number',
+              'any.required': 'employeeProjectOverrides.employee_id is required'
+            }),
+            client_project_ids: Joi.alternatives()
+              .try(
+                Joi.array().items(Joi.number().integer().positive()).min(1).messages({
+                  'array.base': 'client_project_ids must be an array of numbers',
+                  'array.min': 'client_project_ids must contain at least one project id'
+                }),
+                Joi.number().integer().positive()
+              )
+              .required()
+              .messages({
+                'any.required': 'client_project_ids is required for employeeProjectOverrides'
+              })
+          })
+        )
+        .optional()
+        .messages({
+          'array.base': 'employeeProjectOverrides must be an array of override objects'
+        })
     })
       .required()
       .custom((value, helpers) => {

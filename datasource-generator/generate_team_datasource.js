@@ -87,10 +87,12 @@ class TeamDatasourceGenerator {
   constructor() {
     // Get project name from config or use projectFolder from mapping
     this.projectName = config.jira?.project || nameMapping.projectFolder || 'team';
-    this.outputDir = path.join(__dirname, 'output');
+    const { getProjectFolder } = require('../lib/project-folder');
+    const pf = getProjectFolder(process.env.TEAM, config);
+    this.outputDir = path.join(__dirname, 'output', pf);
     this.templatePath = path.join(__dirname, 'templates', 'team_datasource_template.py');
-    this.jiraDir = path.join(__dirname, '..', 'jira', 'md_output');
-    this.transcriptsDir = path.join(__dirname, '..', 'transcripts', 'markdown-output');
+    this.jiraDir = path.join(__dirname, '..', 'jira', 'md_output', pf);
+    this.transcriptsDir = path.join(__dirname, '..', 'transcripts', 'markdown-output', pf);
     
     // Ensure output directory exists
     if (!fs.existsSync(this.outputDir)) {
@@ -292,8 +294,18 @@ def search_content(keyword, data_type="all"):
     return results
 `;
 
-    // Write the file
-    const outputFileName = `datasource_${this.projectName.toLowerCase()}_team.py`;
+    // Write the file (configurable filename)
+    const { buildFilename } = require('./lib/output-filename');
+    const template = (config && config.outputFilenames && config.outputFilenames.team) || null;
+    const projectFolder = (typeof nameMapping?.projectFolder === 'string' && nameMapping.projectFolder) || this.projectName.toLowerCase();
+    const outputFileName = buildFilename(template, {
+      project: this.projectName,
+      projectFolder,
+      team: process.env.TEAM || '',
+      reportType: 'team',
+      start_date: config?.jira?.start_date,
+      end_date: config?.jira?.end_date
+    });
     const outputPath = path.join(this.outputDir, outputFileName);
     
     fs.writeFileSync(outputPath, pythonContent);

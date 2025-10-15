@@ -5,6 +5,8 @@ require('dotenv').config();
 
 // Load config
 const config = require('../lib/config').load();
+const { getProjectFolder } = require('../lib/project-folder');
+const PROJECT_FOLDER = getProjectFolder(process.env.TEAM, config);
 const { getChangelogBullets } = require('./lib/changelog-markdown');
 
 /**
@@ -457,8 +459,8 @@ async function convertCsvToMarkdown(csvFile, outputFile) {
  * Main function to process all CSV files
  */
 async function processAllCsvFiles() {
-  const inputDir = path.join(__dirname, 'data', 'by-assignee');
-  const outputDir = path.join(__dirname, 'md_output', 'by-assignee');
+  const inputDir = path.join(__dirname, 'data', PROJECT_FOLDER, 'by-assignee');
+  const outputDir = path.join(__dirname, 'md_output', PROJECT_FOLDER, 'by-assignee');
   
   // Create output directory if it doesn't exist
   if (!fs.existsSync(outputDir)) {

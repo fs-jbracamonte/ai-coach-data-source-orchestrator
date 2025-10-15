@@ -2,9 +2,13 @@ const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
 
+const { getProjectFolder } = require('../lib/project-folder');
+const config = require('../lib/config').load();
+const PROJECT_FOLDER = getProjectFolder(process.env.TEAM, config);
+
 class DailyReportMarkdownConverter {
   constructor() {
-    this.outputDir = path.join(__dirname, 'md-output');
+    this.outputDir = path.join(__dirname, 'md-output', PROJECT_FOLDER);
   }
 
   ensureOutputDir() {
@@ -296,7 +300,7 @@ async function main() {
   converter.ensureOutputDir();
 
   // Look for CSV files in the data directory
-  const dataDir = path.join(__dirname, 'data');
+  const dataDir = path.join(__dirname, 'data', PROJECT_FOLDER);
   
   if (!fs.existsSync(dataDir)) {
     console.error('Data directory not found. Please run the database query first.');

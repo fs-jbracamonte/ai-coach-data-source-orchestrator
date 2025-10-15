@@ -5,6 +5,8 @@ require('dotenv').config();
 
 // Load config
 const config = require('../lib/config').load();
+const { getProjectFolder } = require('../lib/project-folder');
+const PROJECT_FOLDER = getProjectFolder(process.env.TEAM, config);
 const { JiraAPIError, ConfigurationError, FileSystemError } = require('../lib/errors');
 const { handleError } = require('../lib/error-handler');
 const enrichWithChangelog = require('./enrich-with-changelog');
@@ -353,8 +355,8 @@ async function exportJiraData() {
     return row.join(',');
   });
 
-  // Create data directory if it doesn't exist
-  const dataDir = path.join(__dirname, 'data');
+  // Create data directory if it doesn't exist (scoped by project)
+  const dataDir = path.join(__dirname, 'data', PROJECT_FOLDER);
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }

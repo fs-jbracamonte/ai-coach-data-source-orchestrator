@@ -67,12 +67,18 @@
     "rocks:1on1": "node datasource-generator/generate_datasources.js --team rocks --report 1on1",
     "rocks:team": "node datasource-generator/generate_team_datasource.js --team rocks --report team",
     "rocks:weekly": "node datasource-generator/generate_weekly_digest.js --team rocks --report weekly",
-    "engagepath:1on1": "cross-env CONFIG_FILE=configs/engagepath/config.json node datasource-generator/generate_datasources.js",
+    "aicoach:1on1": "node datasource-generator/generate_datasources.js --team aicoach --report 1on1",
+    "aicoach:team": "node datasource-generator/generate_team_datasource.js --team aicoach --report team",
+    "aicoach:weekly": "node datasource-generator/generate_weekly_digest.js --team aicoach --report weekly",
+    "engagepath:1on1": "node datasource-generator/generate_datasources.js --team engagepath --report 1on1",
     "engagepath:team": "node datasource-generator/generate_team_datasource.js --team engagepath --report team",
     "engagepath:weekly": "node datasource-generator/generate_weekly_digest.js --team engagepath --report weekly",
     "timeclock:1on1": "node datasource-generator/generate_datasources.js --team timeclock --report 1on1",
     "timeclock:team": "node datasource-generator/generate_team_datasource.js --team timeclock --report team",
     "timeclock:weekly": "node datasource-generator/generate_weekly_digest.js --team timeclock --report weekly",
+    
+    "all:weekly": "node scripts/run-all-weekly.js",
+    "all:1on1": "node scripts/run-all-1on1.js",
   
 
     "list-reports": "node -e \"const fs=require('fs');const p='configs';let teams=[];if(fs.existsSync(p)){teams=fs.readdirSync(p,{withFileTypes:true}).filter(d=>d.isDirectory()&&d.name!=='shared').map(d=>d.name);}console.log('Available teams:',teams.join(', ')||'(none)');console.log('Report types: 1on1, team, weekly');\"",

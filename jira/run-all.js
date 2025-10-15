@@ -44,10 +44,13 @@ async function runAll() {
     await runScript('csv-to-markdown.js', 'Step 3: Convert to markdown');
     
     console.log('\n=== All steps completed successfully! ===');
+    const cfg = require('../lib/config').load();
+    const { getProjectFolder } = require('../lib/project-folder');
+    const pf = getProjectFolder(process.env.TEAM, cfg);
     console.log('\nOutput locations:');
-    console.log('  - Main export: jira/data/');
-    console.log('  - Split CSVs: jira/data/by-assignee/');
-    console.log('  - Markdown reports: jira/md_output/');
+    console.log(`  - Main export: jira/data/${pf}/`);
+    console.log(`  - Split CSVs: jira/data/${pf}/by-assignee/`);
+    console.log(`  - Markdown reports: jira/md_output/${pf}/`);
     
   } catch (error) {
     console.error('\n=== Pipeline failed ===');

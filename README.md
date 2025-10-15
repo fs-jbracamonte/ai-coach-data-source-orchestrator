@@ -253,6 +253,35 @@ Each module can use different date ranges. To synchronize them:
 }
 ```
 
+### outputFilenames (optional)
+
+Control the generated datasource filenames per report type using tokenized templates.
+
+Supported tokens:
+- `{project}`, `{projectFolder}`, `{team}`, `{reportType}`, `{start_date}`, `{end_date}`
+- 1on1-specific: `{memberShort}`, `{memberFull}`, `{memberSlug}`
+- Utility: `{today}` (YYYY-MM-DD), `{timestamp}` (YYYYMMDD_HHmmss)
+
+Defaults (if omitted):
+- weekly: `datasource_weekly_{project}.py`
+- team: `datasource_{project}_team.py`
+- oneOnOne: `datasource_{memberShort}.py`
+
+Example:
+```json
+{
+  "outputFilenames": {
+    "weekly": "digest_{projectFolder}_{start_date}_to_{end_date}.py",
+    "team": "team_{project}_{start_date}_to_{end_date}.py",
+    "oneOnOne": "{memberSlug}_{project}_{start_date}.py"
+  }
+}
+```
+
+Notes:
+- Templates are sanitized and `.py` is ensured.
+- 1on1 filenames are generated per member using team-name mapping for `{memberShort}`; `{memberSlug}` is a safe slug of the full name.
+
 ## Cleaning Generated Data
 
 Clean specific data types:
@@ -269,6 +298,29 @@ npm run clean:all
 ```
 
 This will remove all generated files while preserving the directory structure and configuration files.
+
+## Project-Scoped Outputs (Breaking Change)
+
+Outputs are written under per-project folders to avoid cross-project mixing:
+
+- Daily reports → `daily-reports/data/{projectFolder}/`, `daily-reports/md-output/{projectFolder}/`
+- Jira → `jira/data/{projectFolder}/`, `jira/data/{projectFolder}/by-assignee/`, `jira/md_output/{projectFolder}/`
+- Transcripts → `transcripts/downloads/{projectFolder}/`, `transcripts/markdown-output/{projectFolder}/`
+- Datasources → `datasource-generator/output/{projectFolder}/`
+
+`{projectFolder}` comes from `datasource-generator/team-name-mapping-<team>.json` (projectFolder), then `team-name-mapping.json`, then `config.jira.project.toLowerCase()`, then `<team>`.
+
+## Run All Teams Sequentially (Rate-limit Friendly)
+
+```bash
+npm run all:weekly   # all teams weekly digest
+npm run all:1on1     # all teams 1on1
+
+# Optional overrides
+cross-env RUN_TEAMS="rocks,engagepath" INTER_PROJECT_DELAY_MS=10000 npm run all:weekly
+```
+
+Per-team commands remain available (e.g., `rocks:weekly`, `engagepath:1on1`).
 
 ## Support
 

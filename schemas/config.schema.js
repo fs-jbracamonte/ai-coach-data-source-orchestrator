@@ -55,6 +55,14 @@ const folderIdSchema = Joi.string()
  * Complete configuration schema
  */
 const configSchema = Joi.object({
+  // Output filename templates
+  outputFilenames: Joi.object({
+    weekly: Joi.string().optional().messages({ 'string.base': 'outputFilenames.weekly must be a string' }),
+    team: Joi.string().optional().messages({ 'string.base': 'outputFilenames.team must be a string' }),
+    oneOnOne: Joi.string().optional().messages({ 'string.base': 'outputFilenames.oneOnOne must be a string' })
+  })
+    .optional()
+    .messages({ 'object.base': 'outputFilenames must be an object' }),
   // Daily Reports Configuration
   dailyReports: Joi.object({
     query: Joi.object({

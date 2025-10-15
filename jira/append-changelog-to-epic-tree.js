@@ -6,9 +6,12 @@ const { handleError } = require('../lib/error-handler');
 const { FileSystemError } = require('../lib/errors');
 const enrichWithChangelog = require('./enrich-with-changelog');
 const { getChangelogBullets } = require('./lib/changelog-markdown');
+const { getProjectFolder } = require('../lib/project-folder');
+const config = require('../lib/config').load();
+const PROJECT_FOLDER = getProjectFolder(process.env.TEAM, config);
 
 function getLatestEpicTreeFile() {
-  const dir = path.join(__dirname, 'md_output');
+  const dir = path.join(__dirname, 'md_output', PROJECT_FOLDER);
   if (!fs.existsSync(dir)) return null;
   const files = fs.readdirSync(dir).filter(f => /^epic_tree_.*_to_.*\.md$/.test(f));
   if (files.length === 0) return null;

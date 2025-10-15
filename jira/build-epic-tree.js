@@ -11,6 +11,7 @@ const csv = require('csv-parser');
 
 // Load config (hierarchical when TEAM and REPORT_TYPE are set; fallback to legacy)
 let config;
+const { getProjectFolder } = require('../lib/project-folder');
 try {
   config = configModule.load();
 } catch (error) {
@@ -192,7 +193,8 @@ function makeJiraPostRequest(requestPath, body, attempt = 0) {
 
 // --- CSV seeds ---
 async function ensureExportAndGetCsvPath() {
-  const dataDir = path.join(__dirname, 'data');
+  const PROJECT_FOLDER = getProjectFolder(process.env.TEAM, config);
+  const dataDir = path.join(__dirname, 'data', PROJECT_FOLDER);
   ensureDir(dataDir);
   const expected = `${config.jira.project}_${config.jira.start_date}_to_${config.jira.end_date}_export.csv`;
   const fullPath = path.join(dataDir, expected);
@@ -577,7 +579,8 @@ async function main() {
   console.log(`[epic-tree] Resolved ${epicKeys.length} epic(s).`);
 
   // Prepare output
-  const outputDir = path.join(__dirname, 'md_output');
+  const PROJECT_FOLDER = getProjectFolder(process.env.TEAM, config);
+  const outputDir = path.join(__dirname, 'md_output', PROJECT_FOLDER);
   ensureDir(outputDir);
   const outName = `epic_tree_${config.jira.project}_${config.jira.start_date}_to_${config.jira.end_date}.md`;
   const outPath = path.join(outputDir, outName);

@@ -8,6 +8,8 @@ require('dotenv').config();
 
 // Load configuration
 const config = require('../lib/config').load();
+const { getProjectFolder } = require('../lib/project-folder');
+const PROJECT_FOLDER = getProjectFolder(process.env.TEAM, config);
 const { DatabaseConnectionError, FileSystemError } = require('../lib/errors');
 const { handleError } = require('../lib/error-handler');
 
@@ -200,8 +202,8 @@ async function saveResultsAsCSV(results, filename) {
     return;
   }
 
-  // Create data directory if it doesn't exist
-  const dataDir = path.join(__dirname, 'data');
+  // Create data directory if it doesn't exist (scoped by project)
+  const dataDir = path.join(__dirname, 'data', PROJECT_FOLDER);
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
     console.log('Created data directory');

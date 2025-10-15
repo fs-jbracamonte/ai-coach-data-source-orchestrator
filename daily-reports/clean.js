@@ -2,7 +2,10 @@ const fs = require('fs');
 const path = require('path');
 
 // Directories to clean
-const dirsToClean = ['data', 'md-output'];
+const { getProjectFolder } = require('../lib/project-folder');
+const cfg = require('../lib/config').load();
+const PF = getProjectFolder(process.env.TEAM, cfg);
+const dirsToClean = [path.join('data', PF), path.join('md-output', PF)];
 
 console.log('Daily Reports - Clean Output Directories\n');
 

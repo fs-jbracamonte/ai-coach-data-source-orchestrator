@@ -26,6 +26,11 @@
     "filterByTeamMembers": false,
     "minimumTeamMembersRequired": 1,
     "teamMappingFile": "datasource-generator/team-name-mapping.json"
+  },
+  "outputFilenames": {
+    "weekly": "datasource_weekly_{project}.py",
+    "team": "datasource_{project}_team.py",
+    "oneOnOne": "datasource_{memberShort}.py"
   }
 }
 

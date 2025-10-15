@@ -86,13 +86,14 @@ let nameMapping;
 class DatasourceGenerator {
   constructor() {
     // Get project folder from config
-    const projectFolder = nameMapping.projectFolder || 'default';
+    const { getProjectFolder } = require('../lib/project-folder');
+    const projectFolder = getProjectFolder(process.env.TEAM, config) || nameMapping.projectFolder || 'default';
     this.outputDir = path.join(__dirname, 'output', projectFolder);
     this.templatePath = path.join(__dirname, 'templates', 'datasource_template.py');
-    this.dailyReportsDir = path.join(__dirname, '..', 'daily-reports', 'md-output');
-    this.jiraDir = path.join(__dirname, '..', 'jira', 'md_output');
+    this.dailyReportsDir = path.join(__dirname, '..', 'daily-reports', 'md-output', projectFolder);
+    this.jiraDir = path.join(__dirname, '..', 'jira', 'md_output', projectFolder);
     this.jiraAssigneeDir = path.join(this.jiraDir, 'by-assignee');
-    this.transcriptsDir = path.join(__dirname, '..', 'transcripts', 'markdown-output');
+    this.transcriptsDir = path.join(__dirname, '..', 'transcripts', 'markdown-output', projectFolder);
     
     // Ensure output directory exists
     if (!fs.existsSync(this.outputDir)) {
@@ -248,62 +249,114 @@ class DatasourceGenerator {
       console.warn(`Directory not found: ${directory}`);
       return '';
     }
-    
+
     const files = fs.readdirSync(directory).filter(f => f.endsWith('.md'));
-    
-    // Try to find file containing team member name
-    // Handle different separators: spaces, underscores, and hyphens
-    const nameVariations = [
-      teamMemberName,                                    // Original: "Mark Jerly Bundalian"
-      teamMemberName.replace(/\s+/g, '_'),              // Underscores: "Mark_Jerly_Bundalian"
-      teamMemberName.replace(/\s+/g, '-'),              // Hyphens: "Mark-Jerly-Bundalian"
-      teamMemberName.replace(/\s+/g, ' '),              // Spaces normalized
-    ];
-    
-    // Add aliases from mapping if available
+
+    // Helpers
+    const normalize = (s) => String(s || '')
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+
+    const toWordRegex = (phrase) => {
+      const p = String(phrase || '').replace(/[^a-z0-9]+/gi, ' ').trim();
+      if (!p) return null;
+      // Word boundary for the whole phrase (spaces allowed inside)
+      return new RegExp(`(^|[^A-Za-z0-9])${p.replace(/\s+/g, '[^A-Za-z0-9]+')}($|[^A-Za-z0-9])`, 'i');
+    };
+
+    // Build candidate variations
+    const nameVariations = new Set();
+    nameVariations.add(teamMemberName);
+    nameVariations.add(teamMemberName.replace(/\s+/g, '_'));
+    nameVariations.add(teamMemberName.replace(/\s+/g, '-'));
+    nameVariations.add(teamMemberName.replace(/\s+/g, ' '));
+
     const mapping = nameMapping.mappings[teamMemberName];
     if (mapping && typeof mapping === 'object') {
-      if (mapping.aliases && Array.isArray(mapping.aliases)) {
-        nameVariations.push(...mapping.aliases);
-      }
-      if (mapping.fullName) {
-        nameVariations.push(mapping.fullName);
-      }
+      if (Array.isArray(mapping.aliases)) mapping.aliases.forEach(a => nameVariations.add(a));
+      if (mapping.fullName) nameVariations.add(mapping.fullName);
     }
-    
-    // Also try variations with mixed spaces and hyphens
-    const nameParts = teamMemberName.split(' ');
-    if (nameParts.length >= 2) {
-      const firstName = nameParts[0];
-      const lastName = nameParts[nameParts.length - 1];
-      nameVariations.push(`${firstName}-${lastName}`);   // "Mark-Bundalian"
-      nameVariations.push(`${firstName}_${lastName}`);   // "Mark_Bundalian"
-      nameVariations.push(`${firstName} ${lastName}`);   // "Mark Bundalian"
-      
-      // For middle names, try space before last name with hyphen
+
+    const nameParts = teamMemberName.trim().split(/\s+/).filter(Boolean);
+    const firstName = nameParts[0] || '';
+    const rawLast = nameParts[nameParts.length - 1] || '';
+    const suffixes = new Set(['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv', 'v']);
+    const lastName = (suffixes.has(rawLast.toLowerCase()) && nameParts.length >= 2)
+      ? nameParts[nameParts.length - 2]
+      : rawLast;
+    if (firstName && lastName) {
+      nameVariations.add(`${firstName}-${lastName}`);
+      nameVariations.add(`${firstName}_${lastName}`);
+      nameVariations.add(`${firstName} ${lastName}`);
       if (nameParts.length === 3) {
         const middleName = nameParts[1];
-        nameVariations.push(`${firstName} ${middleName}-${lastName}`);  // "Mark Jerly-Bundalian"
-        nameVariations.push(`${firstName}-${middleName}-${lastName}`);  // "Mark-Jerly-Bundalian"
-        nameVariations.push(`${firstName}_${middleName}_${lastName}`);  // "Mark_Jerly_Bundalian"
+        nameVariations.add(`${firstName} ${middleName}-${lastName}`);
+        nameVariations.add(`${firstName}-${middleName}-${lastName}`);
+        nameVariations.add(`${firstName}_${middleName}_${lastName}`);
       }
     }
-    
-    // Find files that match any variation
-    const matchingFiles = files.filter(f => {
-      const lowerFile = f.toLowerCase();
-      return nameVariations.some(variation => 
-        lowerFile.includes(variation.toLowerCase())
-      );
-    });
-    
-    if (matchingFiles.length > 0) {
-      console.log(`  Found ${matchingFiles.length} matching file(s) for ${teamMemberName}: ${matchingFiles.join(', ')}`);
-      // Use the most recent file if multiple matches
-      const filePath = path.join(directory, matchingFiles[0]);
-      return fs.readFileSync(filePath, 'utf8').trim();
+
+    // Filter out too-short variations (avoid false positives like "Rey")
+    const filteredVariations = Array.from(nameVariations).filter(v => (v || '').replace(/[^A-Za-z]/g, '').length >= 4);
+    const variationRegexes = filteredVariations
+      .map(v => toWordRegex(v))
+      .filter(Boolean);
+
+    // Content-based match: prefer files whose content's Employee/Assignee lines match
+    const matchesContent = (content) => {
+      const lines = String(content || '').split(/\r?\n/);
+      const headers = lines.filter(line => /\*\*(Employee|Assignee)\*\*:\s*|^(Employee|Assignee):\s*/i.test(line));
+      const candidates = headers.map(line => {
+        const m = line.match(/\*\*(Employee|Assignee)\*\*:\s*(.+)$/i) || line.match(/^(Employee|Assignee):\s*(.+)$/i);
+        return m ? m[2].trim() : '';
+      }).filter(Boolean);
+      if (candidates.length === 0) return false;
+
+      const candidateNorms = candidates.map(c => normalize(c).replace(/\b(jr\.?|sr\.?|ii|iii|iv|v)\b/gi, '').replace(/\s+/g, ' ').trim());
+      const targetFull = normalize(teamMemberName).replace(/\b(jr\.?|sr\.?|ii|iii|iv|v)\b/gi, '').replace(/\s+/g, ' ').trim();
+      const targetFirst = normalize(firstName);
+      const targetLast = normalize(lastName);
+
+      for (const cand of candidateNorms) {
+        // Exact full name check
+        if (toWordRegex(teamMemberName)?.test(cand)) return true;
+        // First+last check (both must appear as words)
+        const firstOk = targetFirst && new RegExp(`(^|[^a-z0-9])${targetFirst}($|[^a-z0-9])`).test(cand);
+        const lastOk = targetLast && new RegExp(`(^|[^a-z0-9])${targetLast}($|[^a-z0-9])`).test(cand);
+        if (firstOk && lastOk) return true;
+        // Any long alias phrase match
+        for (const rx of variationRegexes) {
+          if (rx.test(cand)) return true;
+        }
+      }
+      return false;
+    };
+
+    // 1) Try content verification
+    for (const file of files) {
+      const p = path.join(directory, file);
+      let text = '';
+      try { text = fs.readFileSync(p, 'utf8'); } catch (_) { continue; }
+      if (matchesContent(text)) {
+        return text.trim();
+      }
     }
-    
+
+    // 2) Fallback: filename-based, require both first and last name as word-bounded tokens
+    const firstRx = firstName ? new RegExp(`(^|[^A-Za-z0-9])${firstName}($|[^A-Za-z0-9])`, 'i') : null;
+    const lastRx = lastName ? new RegExp(`(^|[^A-Za-z0-9])${lastName}($|[^A-Za-z0-9])`, 'i') : null;
+    const filenameCandidate = files.find(f => {
+      const lower = f;
+      const firstOk = firstRx ? firstRx.test(lower) : true;
+      const lastOk = lastRx ? lastRx.test(lower) : true;
+      return firstOk && lastOk;
+    });
+    if (filenameCandidate) {
+      const p = path.join(directory, filenameCandidate);
+      try { return fs.readFileSync(p, 'utf8').trim(); } catch (_) {}
+    }
+
     console.log(`  No matching files found for ${teamMemberName} in ${directory}`);
     return '';
   }
@@ -340,8 +393,21 @@ class DatasourceGenerator {
       .replace('{{TEAM_MEMBER_NAME}}', teamMemberName)
       .replace('{{GENERATED_DATE}}', new Date().toLocaleString());
     
-    // Write output file
-    const outputPath = path.join(this.outputDir, `datasource_${shortName}.py`);
+    // Write output file (configurable filename)
+    const { buildFilename } = require('./lib/output-filename');
+    const filenameTemplate = (config && config.outputFilenames && config.outputFilenames.oneOnOne) || null;
+    const projectFolder = (typeof nameMapping?.projectFolder === 'string' && nameMapping.projectFolder) || 'team';
+    const outputFileName = buildFilename(filenameTemplate, {
+      project: config.jira?.project || projectFolder,
+      projectFolder,
+      team: process.env.TEAM || '',
+      reportType: '1on1',
+      start_date: config?.jira?.start_date,
+      end_date: config?.jira?.end_date,
+      memberShort: shortName,
+      memberFull: teamMemberName
+    });
+    const outputPath = path.join(this.outputDir, outputFileName);
     fs.writeFileSync(outputPath, datasource);
     
     console.log(`  ✓ Created: ${outputPath}`);

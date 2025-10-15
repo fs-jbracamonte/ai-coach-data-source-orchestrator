@@ -87,11 +87,14 @@ class WeeklyDigestGenerator {
   constructor() {
     // Get project name from config or use projectFolder from mapping
     this.projectName = config.jira?.project || nameMapping.projectFolder || 'team';
-    this.outputDir = path.join(__dirname, 'output');
+    const { getProjectFolder } = require('../lib/project-folder');
+    const pf = getProjectFolder(process.env.TEAM, config);
+    this.outputDir = path.join(__dirname, 'output', pf);
     this.templatePath = path.join(__dirname, 'templates', 'team_datasource_template.py');
-    this.jiraDir = path.join(__dirname, '..', 'jira', 'md_output');
-    this.transcriptsDir = path.join(__dirname, '..', 'transcripts', 'markdown-output');
-    this.dailyReportsDir = path.join(__dirname, '..', 'daily-reports', 'md-output');
+    const pf2 = pf;
+    this.jiraDir = path.join(__dirname, '..', 'jira', 'md_output', pf2);
+    this.transcriptsDir = path.join(__dirname, '..', 'transcripts', 'markdown-output', pf2);
+    this.dailyReportsDir = path.join(__dirname, '..', 'daily-reports', 'md-output', pf2);
     
     // Ensure output directory exists
     if (!fs.existsSync(this.outputDir)) {
@@ -672,8 +675,18 @@ def get_employee_reports(employee_name):
     return entries
 `;
 
-    // Write the file
-    const outputFileName = `datasource_weekly_${this.projectName.toLowerCase()}.py`;
+    // Write the file (configurable filename)
+    const { buildFilename } = require('./lib/output-filename');
+    const template = (config && config.outputFilenames && config.outputFilenames.weekly) || null;
+    const projectFolder = (typeof nameMapping?.projectFolder === 'string' && nameMapping.projectFolder) || this.projectName.toLowerCase();
+    const outputFileName = buildFilename(template, {
+      project: this.projectName,
+      projectFolder,
+      team: process.env.TEAM || '',
+      reportType: 'weekly',
+      start_date: config?.jira?.start_date,
+      end_date: config?.jira?.end_date
+    });
     const outputPath = path.join(this.outputDir, outputFileName);
     
     // Strip embedded Python helpers to keep data-only output

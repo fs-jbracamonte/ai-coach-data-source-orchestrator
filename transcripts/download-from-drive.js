@@ -13,11 +13,13 @@ const { handleError } = require('../lib/error-handler');
 const FOLDER_IDS = config.transcripts.folder_ids || 
                    (config.transcripts.folderId ? [config.transcripts.folderId] : []);
 const SERVICE_ACCOUNT_KEY_FILE = config.transcripts.serviceAccountKeyFile;
-const DOWNLOAD_DIR = config.transcripts.downloadDir;
+const { getProjectFolder } = require('../lib/project-folder');
+const PROJECT_FOLDER = getProjectFolder(process.env.TEAM, config);
+const DOWNLOAD_DIR = path.join(config.transcripts.downloadDir, PROJECT_FOLDER);
 const FILE_PREFIX = config.transcripts.filePrefix || '';
 const SANITIZE_FILENAMES = config.transcripts.sanitizeFilenames !== false;
 const CONVERT_TO_MARKDOWN = config.transcripts.convertToMarkdown || false;
-const MARKDOWN_OUTPUT_DIR = config.transcripts.markdownOutputDir || './markdown-output';
+const MARKDOWN_OUTPUT_DIR = path.join(config.transcripts.markdownOutputDir || './markdown-output', PROJECT_FOLDER);
 const ORGANIZE_BY_FOLDER = config.transcripts.organizeByFolder || false;
 
 // Sanitize filename for Windows/cross-platform compatibility

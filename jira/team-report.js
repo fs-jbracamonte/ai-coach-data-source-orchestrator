@@ -5,6 +5,8 @@ require('dotenv').config();
 
 // Load config
 const config = require('../lib/config').load();
+const { getProjectFolder } = require('../lib/project-folder');
+const PROJECT_FOLDER = getProjectFolder(process.env.TEAM, config);
 const { getChangelogBullets } = require('./lib/changelog-markdown');
 
 /**
@@ -557,8 +559,8 @@ async function generateTeamReport(csvFile, outputFile) {
  * Main function
  */
 async function main() {
-  const dataDir = path.join(__dirname, 'data');
-  const outputDir = path.join(__dirname, 'md_output');
+  const dataDir = path.join(__dirname, 'data', PROJECT_FOLDER);
+  const outputDir = path.join(__dirname, 'md_output', PROJECT_FOLDER);
   
   // Create output directory if it doesn't exist
   if (!fs.existsSync(outputDir)) {

@@ -6,6 +6,8 @@ require('dotenv').config();
 
 // Load config
 const config = require('../lib/config').load();
+const { getProjectFolder } = require('../lib/project-folder');
+const PROJECT_FOLDER = getProjectFolder(process.env.TEAM, config);
 const { loadTeamMapping, findMatchingTeamMember } = require('../lib/name-matcher');
 
 // Load team name mapping
@@ -23,7 +25,7 @@ async function splitCsvByAssignee() {
   }
 
   const project = config.jira.project;
-  const inputFile = path.join(__dirname, 'data', `${project}_${config.jira.start_date}_to_${config.jira.end_date}_export.csv`);
+  const inputFile = path.join(__dirname, 'data', PROJECT_FOLDER, `${project}_${config.jira.start_date}_to_${config.jira.end_date}_export.csv`);
   
   // Check if input file exists
   if (!fs.existsSync(inputFile)) {
@@ -110,7 +112,7 @@ async function splitCsvByAssignee() {
         console.log(`Found issues for ${Object.keys(issuesByAssignee).length} ${assigneeLabel}:\n`);
         
         // Create output directory
-        const outputDir = path.join(__dirname, 'data', 'by-assignee');
+        const outputDir = path.join(__dirname, 'data', PROJECT_FOLDER, 'by-assignee');
         if (!fs.existsSync(outputDir)) {
           fs.mkdirSync(outputDir, { recursive: true });
         }

@@ -23,8 +23,8 @@ function cleanDirectory(dirPath, indent = '') {
       console.log(`${indent}Cleaning ${item}/...`);
       const subCount = cleanDirectory(itemPath, indent + '  ');
       deletedCount += subCount;
-    } else if (item.startsWith('datasource_') && item.endsWith('.py')) {
-      // Delete datasource_*.py files
+    } else if (item.endsWith('.py')) {
+      // Delete any generated .py datasource files (team, weekly, 1on1)
       try {
         fs.unlinkSync(itemPath);
         console.log(`${indent}  ✓ Deleted: ${item}`);

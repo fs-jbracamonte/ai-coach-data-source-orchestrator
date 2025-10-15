@@ -2,7 +2,10 @@ const fs = require('fs');
 const path = require('path');
 
 // Directories to clean
-const dirsToClean = ['downloads', 'markdown-output'];
+const { getProjectFolder } = require('../lib/project-folder');
+const cfg = require('../lib/config').load();
+const PF = getProjectFolder(process.env.TEAM, cfg);
+const dirsToClean = [path.join('downloads', PF), path.join('markdown-output', PF)];
 
 console.log('Transcripts - Clean Output Directories\n');
 

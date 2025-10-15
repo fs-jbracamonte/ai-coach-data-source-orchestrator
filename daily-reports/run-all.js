@@ -41,8 +41,12 @@ async function main() {
     console.log('\n' + '='.repeat(50) + '\n');
     console.log('✓ All tasks completed successfully!');
     console.log('\nCheck the following directories:');
-    console.log('  - CSV files: daily-reports/data/');
-    console.log('  - Markdown files: daily-reports/md-output/');
+    const team = process.env.TEAM || '';
+    const { getProjectFolder } = require('../lib/project-folder');
+    const cfg = require('../lib/config').load();
+    const pf = getProjectFolder(team, cfg);
+    console.log(`  - CSV files: daily-reports/data/${pf}/`);
+    console.log(`  - Markdown files: daily-reports/md-output/${pf}/`);
     
   } catch (error) {
     console.error('\n✗ Error:', error.message);

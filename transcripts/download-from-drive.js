@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
@@ -17,6 +18,9 @@ const { getProjectFolder } = require('../lib/project-folder');
 const PROJECT_FOLDER = getProjectFolder(process.env.TEAM, config);
 const DOWNLOAD_DIR = path.join(config.transcripts.downloadDir, PROJECT_FOLDER);
 const FILE_PREFIX = config.transcripts.filePrefix || '';
+const FILE_PREFIXES = Array.isArray(config.transcripts.filePrefixes)
+  ? config.transcripts.filePrefixes
+  : (FILE_PREFIX ? [FILE_PREFIX] : []);
 const SANITIZE_FILENAMES = config.transcripts.sanitizeFilenames !== false;
 const CONVERT_TO_MARKDOWN = config.transcripts.convertToMarkdown || false;
 const MARKDOWN_OUTPUT_DIR = path.join(config.transcripts.markdownOutputDir || './markdown-output', PROJECT_FOLDER);
@@ -429,12 +433,18 @@ async function downloadFilesFromFolder(drive, folderId, folderName, prefix = '')
     // Apply filters
     let filteredFiles = files;
     
-    // Filter by prefix if specified (case-insensitive, matches anywhere in filename)
-    if (prefix) {
-      const prefixLower = prefix.toLowerCase();
-      filteredFiles = filteredFiles.filter(file => 
-        file.name.toLowerCase().includes(prefixLower)
-      );
+    // Determine prefixes for this folder (per-folder override wins)
+    const perFolder = (config.transcripts.prefixByFolder && config.transcripts.prefixByFolder[folderId]) || null;
+    const folderPrefixes = Array.isArray(perFolder) ? perFolder : (perFolder ? [perFolder] : []);
+    const effectivePrefixes = folderPrefixes.length ? folderPrefixes : (Array.isArray(prefix) ? prefix : (prefix ? [prefix] : FILE_PREFIXES));
+    if (effectivePrefixes && effectivePrefixes.length) {
+      const lowers = effectivePrefixes.map(p => String(p || '').toLowerCase()).filter(Boolean);
+      if (lowers.length) {
+        filteredFiles = filteredFiles.filter(file => {
+          const name = file.name.toLowerCase();
+          return lowers.some(pref => name.includes(pref));
+        });
+      }
     }
     
     // Filter by date range if enabled

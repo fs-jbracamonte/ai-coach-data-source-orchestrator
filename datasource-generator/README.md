@@ -156,6 +156,7 @@ Each weekly digest file contains:
 - `JIRA_DATA` - Individual JIRA reports for configured team members only (unassigned tickets excluded)
 - `DAILY_REPORTS_DATA` - Concatenated daily reports for all configured employees
 - `TRANSCRIPT_DATA` - All meeting transcripts from configured folders
+  - Slack (dashboard/weekly when enabled) is read only from `slack/md-output/{projectFolder}/sanitized/*.md`
 - Helper functions for searching content and extracting summaries
 - Additional helper functions specific to daily reports and JIRA analysis
 

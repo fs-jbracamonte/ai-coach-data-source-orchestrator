@@ -56,7 +56,7 @@ JIRA_API_TOKEN=your-token-here
 ### FileSystemError
 ```bash
 # Reset all output directories
-npm run clean:all
+npm run clean
 
 # Then re-run your workflow
 npm run daily:all

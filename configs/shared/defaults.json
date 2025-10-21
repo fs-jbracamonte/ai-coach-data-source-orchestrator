@@ -27,6 +27,22 @@
     "minimumTeamMembersRequired": 1,
     "teamMappingFile": "datasource-generator/team-name-mapping.json"
   },
+  "slack": {
+    "sanitization": {
+      "enable": true,
+      "redactCodeBlocks": true,
+      "redactInlineCode": true,
+      "maskSecrets": true,
+      "promptDenylistFile": "configs/shared/prompt-denylist.json",
+      "promptDenylist": [
+        "ignore previous instructions",
+        "disregard previous instructions",
+        "act as system",
+        "begin system prompt",
+        "role: system"
+      ]
+    }
+  },
   "outputFilenames": {
     "weekly": "datasource_weekly_{project}.py",
     "team": "datasource_{project}_team.py",

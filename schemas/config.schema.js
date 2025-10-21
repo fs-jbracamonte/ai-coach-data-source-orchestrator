@@ -59,7 +59,8 @@ const configSchema = Joi.object({
   outputFilenames: Joi.object({
     weekly: Joi.string().optional().messages({ 'string.base': 'outputFilenames.weekly must be a string' }),
     team: Joi.string().optional().messages({ 'string.base': 'outputFilenames.team must be a string' }),
-    oneOnOne: Joi.string().optional().messages({ 'string.base': 'outputFilenames.oneOnOne must be a string' })
+    oneOnOne: Joi.string().optional().messages({ 'string.base': 'outputFilenames.oneOnOne must be a string' }),
+    dashboard: Joi.string().optional().messages({ 'string.base': 'outputFilenames.dashboard must be a string' })
   })
     .optional()
     .messages({ 'object.base': 'outputFilenames must be an object' }),
@@ -198,6 +199,120 @@ const configSchema = Joi.object({
       'object.base': 'jira must be an object'
     }),
 
+  // Slack Configuration
+  slack: Joi.object({
+    botTokenEnv: Joi.string()
+      .optional()
+      .messages({
+        'string.base': 'slack.botTokenEnv must be a string (environment variable name)',
+        'string.empty': 'slack.botTokenEnv is required and cannot be empty'
+      }),
+    
+    channels: Joi.array()
+      .items(Joi.string().min(1))
+      .min(1)
+      .optional()
+      .messages({
+        'array.base': 'slack.channels must be an array of channel IDs or names',
+        'array.min': 'slack.channels must contain at least one channel',
+        'string.min': 'Channel IDs/names cannot be empty strings',
+        'any.required': 'slack.channels is required\n  Example: "channels": ["eng-team", "C01234567"]'
+      }),
+    
+    limit: Joi.number()
+      .integer()
+      .min(1)
+      .max(1000)
+      .default(15)
+      .messages({
+        'number.base': 'slack.limit must be a number',
+        'number.integer': 'slack.limit must be an integer',
+        'number.min': 'slack.limit must be at least 1',
+        'number.max': 'slack.limit cannot exceed 1000'
+      }),
+    
+    includeThreads: Joi.boolean()
+      .default(true)
+      .messages({
+        'boolean.base': 'slack.includeThreads must be a boolean (true/false)'
+      }),
+    
+    includeReactions: Joi.boolean()
+      .default(true)
+      .messages({
+        'boolean.base': 'slack.includeReactions must be a boolean (true/false)'
+      }),
+    
+    // Optional: resolve Slack user IDs to names during markdown conversion
+    resolveUserNames: Joi.boolean()
+      .default(true)
+      .messages({
+        'boolean.base': 'slack.resolveUserNames must be a boolean (true/false)'
+      }),
+    
+    // Optional: path override for cached user map (JSON id -> name)
+    userMapFile: Joi.string()
+      .optional()
+      .messages({
+        'string.base': 'slack.userMapFile must be a string (file path)'
+      }),
+    
+    // Optional: refresh the user map automatically during download
+    autoFetchUserMap: Joi.boolean()
+      .default(false)
+      .messages({
+        'boolean.base': 'slack.autoFetchUserMap must be a boolean (true/false)'
+      }),
+    
+    dateFilter: Joi.object({
+      start_date: dateSchema.messages({
+        'any.required': 'slack.dateFilter.start_date is required when dateFilter is provided\n  Example: "start_date": "2025-10-01"'
+      }),
+      
+      end_date: dateSchema.messages({
+        'any.required': 'slack.dateFilter.end_date is required when dateFilter is provided\n  Example: "end_date": "2025-10-07"'
+      })
+    })
+      .optional()
+      .custom((value, helpers) => {
+        // Validate date range
+        if (value && value.start_date && value.end_date) {
+          const start = new Date(value.start_date);
+          const end = new Date(value.end_date);
+          if (start > end) {
+            return helpers.error('any.invalid', {
+              message: `slack.dateFilter.start_date (${value.start_date}) must be before or equal to end_date (${value.end_date})`
+            });
+          }
+        }
+        return value;
+      })
+      .messages({
+        'object.base': 'slack.dateFilter must be an object'
+      }),
+    
+    types: Joi.string()
+      .default('public_channel,private_channel')
+      .messages({
+        'string.base': 'slack.types must be a string (comma-separated channel types)'
+      })
+    ,
+    sanitization: Joi.object({
+      enable: Joi.boolean().default(true).messages({ 'boolean.base': 'slack.sanitization.enable must be a boolean' }),
+      redactCodeBlocks: Joi.boolean().default(true).messages({ 'boolean.base': 'slack.sanitization.redactCodeBlocks must be a boolean' }),
+      redactInlineCode: Joi.boolean().default(true).messages({ 'boolean.base': 'slack.sanitization.redactInlineCode must be a boolean' }),
+      maskSecrets: Joi.boolean().default(true).messages({ 'boolean.base': 'slack.sanitization.maskSecrets must be a boolean' }),
+      promptDenylist: Joi.array().items(Joi.string()).default([]).messages({ 'array.base': 'slack.sanitization.promptDenylist must be an array of strings' }),
+      promptDenylistFile: Joi.string().optional().messages({ 'string.base': 'slack.sanitization.promptDenylistFile must be a string (file path)' })
+    })
+      .default({ enable: true, redactCodeBlocks: true, redactInlineCode: true, maskSecrets: true, promptDenylist: [] })
+      .messages({ 'object.base': 'slack.sanitization must be an object' })
+  })
+    .optional()
+    .messages({
+      'object.base': 'slack must be an object'
+    }),
+
   // Transcripts Configuration
   transcripts: Joi.object({
     // Support both old single folderId and new folder_ids array
@@ -240,6 +355,25 @@ const configSchema = Joi.object({
       .default('')
       .messages({
         'string.base': 'filePrefix must be a string'
+      }),
+
+    // Optional: allow multiple global prefixes
+    filePrefixes: Joi.array()
+      .items(Joi.string())
+      .optional()
+      .messages({
+        'array.base': 'filePrefixes must be an array of strings'
+      }),
+
+    // Optional: per-folder prefix override(s); value can be string or array of strings
+    prefixByFolder: Joi.object()
+      .pattern(/^[a-zA-Z0-9_-]{20,50}$/, Joi.alternatives().try(
+        Joi.string(),
+        Joi.array().items(Joi.string()).min(1)
+      ))
+      .optional()
+      .messages({
+        'object.base': 'prefixByFolder must be an object mapping folderId -> prefix(es)'
       }),
     
     sanitizeFilenames: Joi.boolean()
@@ -379,6 +513,18 @@ const configSchema = Joi.object({
           if (!allFolderIds.includes(multiProjFolder)) {
             return helpers.error('any.invalid', {
               message: `multiProjectFolders contains folder ID "${multiProjFolder}" which is not in folder_ids or folderId\n  All multiProjectFolders must be present in the main folder list`
+            });
+          }
+        }
+      }
+
+      // Validate prefixByFolder keys are subset of folder_ids
+      if (value && value.prefixByFolder && typeof value.prefixByFolder === 'object') {
+        const allFolderIds = value.folder_ids || (value.folderId ? (Array.isArray(value.folderId) ? value.folderId : [value.folderId]) : []);
+        for (const k of Object.keys(value.prefixByFolder)) {
+          if (!allFolderIds.includes(k)) {
+            return helpers.error('any.invalid', {
+              message: `prefixByFolder contains folder ID "${k}" which is not in folder_ids or folderId\n  All prefixByFolder keys must be present in the main folder list`
             });
           }
         }

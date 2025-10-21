@@ -94,6 +94,7 @@ class WeeklyDigestGenerator {
     const pf2 = pf;
     this.jiraDir = path.join(__dirname, '..', 'jira', 'md_output', pf2);
     this.transcriptsDir = path.join(__dirname, '..', 'transcripts', 'markdown-output', pf2);
+    this.slackDir = path.join(__dirname, '..', 'slack', 'md-output', pf2, 'sanitized');
     this.dailyReportsDir = path.join(__dirname, '..', 'daily-reports', 'md-output', pf2);
     
     // Ensure output directory exists

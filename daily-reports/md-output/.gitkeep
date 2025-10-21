@@ -1,2 +1,0 @@
-# This file ensures the md-output directory is tracked by Git
-# Actual markdown output files are ignored by .gitignore

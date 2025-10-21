@@ -179,10 +179,17 @@ This combines both steps automatically:
 To remove all generated CSV and Markdown files:
 
 ```bash
-npm run daily:clean
+# Clean daily reports only
+npm run clean -- --modules daily
+
+# Clean all data for a specific team
+npm run clean -- --team rocks
+
+# Clean everything
+npm run clean
 ```
 
-This will delete all `.csv` files from `data/` and all `.md` files from `md-output/` while preserving the directories and `.gitkeep` files.
+See [docs/CLEANING.md](../docs/CLEANING.md) for more cleaning options.
 
 ### Modifying Query Parameters
 

@@ -40,6 +40,7 @@ function defaultTemplateForType(reportType) {
   if (reportType === 'weekly') return 'datasource_weekly_{project}.py';
   if (reportType === 'team') return 'datasource_{project}_team.py';
   if (reportType === '1on1') return 'datasource_{memberShort}.py';
+  if (reportType === 'dashboard') return 'datasource_dashboard_{project}.py';
   return 'datasource.py';
 }
 

@@ -148,7 +148,7 @@ Added comprehensive error handling documentation:
 ### 6. Error Recovery Suggestions
 - Database connection: Check SSH tunnel
 - Jira 401: Regenerate API token
-- File not found: Run clean:all first
+- File not found: Run `npm run clean` first
 - Google Drive 403: Share folder with service account
 
 ## Testing

@@ -172,20 +172,9 @@ class DatasourceGenerator {
    */
   async generateTranscriptReports() {
     console.log('\n=== Generating Transcript Reports ===\n');
-    
-    // Check if transcripts are already downloaded
-    const downloadsDir = config.transcripts.downloadDir;
-    const hasDownloads = fs.existsSync(downloadsDir) && 
-                        fs.readdirSync(downloadsDir).filter(f => f.endsWith('.txt')).length > 0;
-    
-    if (!hasDownloads) {
-      console.log('No transcript downloads found. Downloading from Google Drive...');
-      await this.runCommand('npm', ['run', 'transcripts:download']);
-    } else {
-      console.log('Transcript downloads found. Converting to markdown...');
-      // Just convert existing downloads
-      await this.convertTranscriptsToMarkdown();
-    }
+    // Always use the unified transcripts pipeline which handles per-project scoping,
+    // date filtering, and (optionally) team-member filtering.
+    await this.runCommand('npm', ['run', 'transcripts:download']);
   }
 
   /**

@@ -126,10 +126,19 @@ The cleaner will automatically discover and include the new project in its opera
 
 ## Module Cleaning Behavior
 
+### Root-Level Files (Legacy Data)
+The cleaner also removes root-level files in module directories that were created before project-scoping was implemented:
+- `jira/data/*.csv` and `jira/md_output/*.md`
+- `daily-reports/data/*.csv` and `daily-reports/md-output/*.md`
+- `transcripts/downloads/*.txt` and `transcripts/markdown-output/*.md`
+
+This ensures complete cleanup of both old (root-level) and new (project-scoped) data.
+
 ### Daily Reports (`daily`)
 **Removes:**
 - `daily-reports/data/{projectFolder}/` (CSV files)
 - `daily-reports/md-output/{projectFolder}/` (markdown files)
+- Root-level CSV and markdown files (legacy data)
 
 ### Jira (`jira`)
 **Removes:**
@@ -137,6 +146,7 @@ The cleaner will automatically discover and include the new project in its opera
 - `jira/md_output/{projectFolder}/` (markdown reports, team reports, epic trees)
 - `jira/data/changelogs/` (global changelog cache)
 - `jira/data/by-assignee/changelogs/` (global changelog cache)
+- Root-level CSV and markdown files (legacy data)
 
 **Note:** Jira changelog caches are always removed when the jira module is selected, regardless of project scope.
 
@@ -144,6 +154,7 @@ The cleaner will automatically discover and include the new project in its opera
 **Removes:**
 - `transcripts/downloads/{projectFolder}/` (raw .txt files)
 - `transcripts/markdown-output/{projectFolder}/` (converted markdown files)
+- Root-level TXT and markdown files (legacy data)
 
 ### Slack (`slack`)
 **Removes:**

@@ -259,6 +259,60 @@ function cleanJiraChangelogCaches() {
 }
 
 /**
+ * Clean root-level files in module directories (legacy data before project-scoping)
+ */
+function cleanRootLevelFiles() {
+  const rootDirs = [
+    { dir: 'jira/data', extensions: ['.csv'] },
+    { dir: 'jira/md_output', extensions: ['.md'] },
+    { dir: 'daily-reports/data', extensions: ['.csv'] },
+    { dir: 'daily-reports/md-output', extensions: ['.md'] },
+    { dir: 'transcripts/downloads', extensions: ['.txt'] },
+    { dir: 'transcripts/markdown-output', extensions: ['.md'] }
+  ];
+
+  let totalRemoved = 0;
+
+  for (const { dir, extensions } of rootDirs) {
+    const fullPath = path.join(__dirname, '..', dir);
+    
+    if (!fs.existsSync(fullPath)) {
+      continue;
+    }
+
+    try {
+      const entries = fs.readdirSync(fullPath, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        // Skip directories and .gitkeep files
+        if (entry.isDirectory() || entry.name === '.gitkeep') {
+          continue;
+        }
+
+        // Check if file matches one of the extensions
+        const hasMatchingExt = extensions.some(ext => entry.name.endsWith(ext));
+        
+        if (hasMatchingExt) {
+          const filePath = path.join(fullPath, entry.name);
+          try {
+            fs.unlinkSync(filePath);
+            console.log(`  Cleaning root-level file: ${dir}/${entry.name}`);
+            console.log(`    ✓ Removed`);
+            totalRemoved++;
+          } catch (err) {
+            console.error(`    ✗ Error deleting ${entry.name}: ${err.message}`);
+          }
+        }
+      }
+    } catch (err) {
+      console.error(`  ✗ Error reading ${dir}: ${err.message}`);
+    }
+  }
+
+  return totalRemoved;
+}
+
+/**
  * Main cleaning function
  */
 function main() {
@@ -324,6 +378,15 @@ function main() {
     console.log('-'.repeat(60));
     const cachesCleaned = cleanJiraChangelogCaches();
     totalCleaned += cachesCleaned;
+  }
+
+  // Clean root-level files (legacy data before project-scoping)
+  console.log('\nCleaning root-level files (legacy data)');
+  console.log('-'.repeat(60));
+  const rootCleaned = cleanRootLevelFiles();
+  totalCleaned += rootCleaned;
+  if (rootCleaned === 0) {
+    console.log('  No root-level files found');
   }
 
   console.log();

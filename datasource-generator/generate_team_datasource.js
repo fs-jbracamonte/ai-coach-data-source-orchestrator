@@ -149,13 +149,21 @@ class TeamDatasourceGenerator {
   }
 
   /**
-   * Get all transcript files
+   * Get all transcript files (with optional date filtering)
    */
   getTranscriptFiles() {
     if (!fs.existsSync(this.transcriptsDir)) {
       console.warn(`Transcripts directory not found: ${this.transcriptsDir}`);
       return [];
     }
+
+    const { parseTranscriptDateFromFilename, isWithinRange } = require('../lib/date-range-filter');
+    
+    // Check if date filtering is enabled
+    const dateFilter = config.transcripts?.dateFilter;
+    const filterEnabled = dateFilter?.enabled === true;
+    const startDate = dateFilter?.startDate;
+    const endDate = dateFilter?.endDate;
 
     // Check if there are subdirectories (when organizeByFolder is true)
     const items = fs.readdirSync(this.transcriptsDir);
@@ -176,6 +184,25 @@ class TeamDatasourceGenerator {
         transcriptFiles.push(item);
       }
     });
+
+    // Filter by date if enabled
+    if (filterEnabled && startDate && endDate) {
+      const filtered = transcriptFiles.filter(file => {
+        const date = parseTranscriptDateFromFilename(file);
+        if (!date) {
+          console.warn(`  ⚠ Cannot parse date from transcript filename, excluding: ${file}`);
+          return false;
+        }
+        return isWithinRange(date, startDate, endDate);
+      });
+      
+      const excluded = transcriptFiles.length - filtered.length;
+      if (excluded > 0) {
+        console.log(`  Filtered transcripts: ${filtered.length} in range, ${excluded} excluded`);
+      }
+      
+      return filtered.sort();
+    }
 
     return transcriptFiles.sort();
   }

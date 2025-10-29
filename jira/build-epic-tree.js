@@ -6,6 +6,7 @@ require('dotenv').config();
 const configModule = require('../lib/config');
 const { JiraAPIError, ConfigurationError, FileSystemError } = require('../lib/errors');
 const { handleError } = require('../lib/error-handler');
+const { loadFieldMap } = require('./lib/field-map');
 
 const csv = require('csv-parser');
 
@@ -428,7 +429,7 @@ function formatStandardFields(issue) {
   return fields.map(i => `**${i.label}**: ${asText(i.value)}  `).join('\n');
 }
 
-function extractCustomFieldsFromIssue(issue) {
+function extractCustomFieldsFromIssue(issue, fieldMap = {}) {
   const f = issue.fields || {};
   const excluded = new Set([
     'summary','issuetype','status','priority','assignee','reporter','created','updated','labels','sprint','fixVersions','duedate','description','parent','project','resolution','environment','components','issuelinks','subtasks','attachment','versions','worklog','timetracking','comment','creator','lastViewed','statuscategorychangedate','security','aggregateprogress','progress','votes','watches','timeestimate','timeoriginalestimate','timespent','aggregatetimeestimate','aggregatetimeoriginalestimate','aggregatetimespent','resolutiondate','workratio'
@@ -441,8 +442,11 @@ function extractCustomFieldsFromIssue(issue) {
     // Ignore empty arrays/objects
     if (Array.isArray(v) && v.length === 0) return;
     if (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0) return;
-    // Presentable name
-    const label = k.startsWith('customfield_') ? k : k;
+    // Presentable name - resolve customfield_* IDs to friendly names
+    let label = k;
+    if (/^customfield_\d+$/.test(k)) {
+      label = fieldMap[k] || k;
+    }
     let valueStr = '';
     if (typeof v === 'string') valueStr = v;
     else if (Array.isArray(v)) valueStr = v.map(x => x && (x.name || x.value || x.displayName || x.key || String(x))).join(', ');
@@ -487,7 +491,7 @@ function formatCommentsSection(comments) {
   return md;
 }
 
-function formatIssueFull(issue, comments) {
+function formatIssueFull(issue, comments, fieldMap = {}) {
   let md = '';
   md += `${ticketHeaderLine(issue)}\n\n`;
   const k1 = formatKeyInfoLines(issue);
@@ -499,7 +503,7 @@ function formatIssueFull(issue, comments) {
   }
   const k2 = formatStandardFields(issue);
   if (k2) md += k2 + '\n\n';
-  const custom = extractCustomFieldsFromIssue(issue);
+  const custom = extractCustomFieldsFromIssue(issue, fieldMap);
   if (custom.length > 0) {
     md += '##### Custom Fields\n\n';
     custom.forEach(cf => { md += `**${cf.label}**: ${cf.value}  \n`; });
@@ -515,7 +519,7 @@ function formatIssueFull(issue, comments) {
   return md;
 }
 
-function formatEpicSection(epicIssue, children, subtasksByParent) {
+function formatEpicSection(epicIssue, children, subtasksByParent, fieldMap = {}) {
   const ef = epicIssue.fields || {};
   let md = '';
   md += `## [${epicIssue.key}] ${ef.summary || 'Untitled Epic'}\n\n`;
@@ -534,14 +538,14 @@ function formatEpicSection(epicIssue, children, subtasksByParent) {
   md += `### Children\n\n`;
   for (const child of children) {
     const childComments = child._epicTreeComments || [];
-    md += formatIssueFull(child, childComments);
+    md += formatIssueFull(child, childComments, fieldMap);
     const childKey = child.key;
     const subs = subtasksByParent.get(childKey) || [];
     if (subs.length > 0) {
       md += `#### Subtasks\n\n`;
       for (const st of subs) {
         const stComments = st._epicTreeComments || [];
-        md += formatIssueFull(st, stComments);
+        md += formatIssueFull(st, stComments, fieldMap);
       }
     }
   }
@@ -551,6 +555,9 @@ function formatEpicSection(epicIssue, children, subtasksByParent) {
 // --- Main ---
 async function main() {
   ensureJiraEnv();
+  
+  // Load field map once at startup
+  const fieldMap = await loadFieldMap();
 
   console.log(`[epic-tree] Building Epic Tree for project=${config.jira.project} range=${config.jira.start_date}..${config.jira.end_date}`);
 
@@ -667,7 +674,7 @@ async function main() {
       }
     }
 
-    md += formatEpicSection(epicIssue, children, subtasksByParent);
+    md += formatEpicSection(epicIssue, children, subtasksByParent, fieldMap);
   }
 
   // Include non-epic seeds so no filtered ticket is dropped
@@ -677,7 +684,7 @@ async function main() {
       try {
         const issue = await getIssueDetails(key);
         const comments = await fetchAllComments(key);
-        md += formatIssueFull(issue, comments);
+        md += formatIssueFull(issue, comments, fieldMap);
       } catch (e) {
         console.warn(`[epic-tree] Failed to include non-epic issue ${key}: ${e.message}`);
       }

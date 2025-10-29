@@ -45,6 +45,8 @@ This will install all dependencies including `mysql2` and `ssh2` needed for data
      - `employee_id`: The employee ID to filter reports (optional - leave empty to query all employees)
      - `report_date_start`: Start date for the report range (YYYY-MM-DD format)
      - `report_date_end`: End date for the report range (YYYY-MM-DD format)
+     
+     **Note**: When datasource files are generated, daily report markdown is automatically trimmed to only include date sections within the `report_date_start` to `report_date_end` range. This ensures datasources contain only in-range content.
 
 ### 3. Set Up SSH Key
 

@@ -25,6 +25,7 @@
     "jira:team-all": "node jira/run-team-report.js",
     "jira:all": "node jira/run-all.js",
     "jira:epic-tree": "node jira/build-epic-tree.js",
+    "jira:refresh-field-map": "node jira/refresh-field-map.js",
     "slack:list": "node slack/list-channels.js",
     "slack:download": "node slack/download.js",
     "slack:markdown": "node slack/convert-to-markdown.js",

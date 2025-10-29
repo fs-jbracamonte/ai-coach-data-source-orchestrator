@@ -98,6 +98,11 @@ Edit `config.json` to customize the download behavior:
 - **folder_ids** (array) or **folderId** (string): Google Drive folder ID(s) to download from
 - **organizeByFolder** (boolean): When true and using multiple folders, creates subdirectories for each folder
 - **filePrefix**: Only download files starting with this prefix (empty string downloads all)
+- **dateFilter**: Controls which files are downloaded AND which are included in generated datasources
+  - When `enabled: true`, the filter applies twice:
+    1. During download: Files outside the date range are not downloaded
+    2. During datasource generation: Downloaded files outside the range are excluded from datasource.py files
+  - This ensures datasources contain only in-range transcript content
 - **sanitizeFilenames**: Clean special characters for cross-platform compatibility
 - **dateFilter**: Filter files by modification date range
 - **convertToMarkdown**: Automatically convert .txt transcripts to formatted .md files

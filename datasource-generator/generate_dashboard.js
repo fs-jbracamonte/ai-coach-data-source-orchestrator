@@ -177,13 +177,21 @@ class DashboardGenerator {
   }
 
   /**
-   * Get all transcript files
+   * Get all transcript files (with optional date filtering)
    */
   getTranscriptFiles() {
     if (!fs.existsSync(this.transcriptsDir)) {
       console.warn(`Transcripts directory not found: ${this.transcriptsDir}`);
       return [];
     }
+
+    const { parseTranscriptDateFromFilename, isWithinRange } = require('./lib/date-range-filter');
+    
+    // Check if date filtering is enabled
+    const dateFilter = config.transcripts?.dateFilter;
+    const filterEnabled = dateFilter?.enabled === true;
+    const startDate = dateFilter?.startDate;
+    const endDate = dateFilter?.endDate;
 
     // Check if there are subdirectories (when organizeByFolder is true)
     const items = fs.readdirSync(this.transcriptsDir);
@@ -204,6 +212,25 @@ class DashboardGenerator {
         transcriptFiles.push(item);
       }
     });
+
+    // Filter by date if enabled
+    if (filterEnabled && startDate && endDate) {
+      const filtered = transcriptFiles.filter(file => {
+        const date = parseTranscriptDateFromFilename(file);
+        if (!date) {
+          console.warn(`  ⚠ Cannot parse date from transcript filename, excluding: ${file}`);
+          return false;
+        }
+        return isWithinRange(date, startDate, endDate);
+      });
+      
+      const excluded = transcriptFiles.length - filtered.length;
+      if (excluded > 0) {
+        console.log(`  Filtered transcripts: ${filtered.length} in range, ${excluded} excluded`);
+      }
+      
+      return filtered.sort();
+    }
 
     return transcriptFiles.sort();
   }
@@ -270,15 +297,35 @@ class DashboardGenerator {
     const dailyReportFiles = this.getDailyReportFiles();
     console.log(`Found ${dailyReportFiles.length} daily report files`);
 
+    // Combine all daily report content (with date range trimming)
+    const { trimDailyMarkdownToRange } = require('./lib/date-range-filter');
+    const startDate = config.dailyReports?.query?.report_date_start;
+    const endDate = config.dailyReports?.query?.report_date_end;
+    
     let dailyReportContent = '';
+    let includedCount = 0;
+    let excludedCount = 0;
+    
     dailyReportFiles.forEach(file => {
-      const content = this.readFileContent(path.join(this.dailyReportsDir, file));
+      let content = this.readFileContent(path.join(this.dailyReportsDir, file));
+      
+      // Trim to date range if configured
+      if (content && startDate && endDate) {
+        content = trimDailyMarkdownToRange(content, startDate, endDate);
+      }
+      
       if (content) {
-        dailyReportContent += `\n# Daily Report: ${file}\n\n`;
         dailyReportContent += content;
         dailyReportContent += '\n\n---\n\n';
+        includedCount++;
+      } else {
+        excludedCount++;
       }
     });
+    
+    if (excludedCount > 0) {
+      console.log(`  Filtered daily reports: ${includedCount} with in-range content, ${excludedCount} excluded`);
+    }
 
     // Get all transcript files
     const transcriptFiles = this.getTranscriptFiles();

@@ -167,6 +167,36 @@ The final markdown reports will be in the `md_output/` folder:
 - Team reports: `{project}_{date}_team_report.md`
 - Individual reports: One file per team member with their tickets organized by status
 
+## Field Name Mapping
+
+The Jira markdown reports automatically resolve custom field IDs (like `customfield_10020`) to friendly names (like "Sprint") using the Jira Fields API.
+
+### How it works
+- Field mappings are fetched from `GET /rest/api/3/field` and cached per project
+- Cache files are stored in `configs/<TEAM>/field-map.json` with a 24-hour TTL
+- Cache files are stored in the configs directory to avoid accidental deletion by clean scripts
+- If the API call fails, reports fall back to showing raw field IDs (graceful degradation)
+- Each project/team has its own cached mapping file
+
+### Manually refresh field mappings
+To force-refresh the field name cache for a specific project:
+
+```bash
+# For engagepath project
+TEAM=engagepath npm run jira:refresh-field-map
+
+# For rocks project  
+TEAM=rocks npm run jira:refresh-field-map
+
+# Force refresh (ignore TTL)
+npm run jira:refresh-field-map -- --force
+```
+
+This is useful when:
+- Custom fields are added/renamed in your Jira instance
+- You want to ensure the latest field names are used
+- The cache file is corrupted or outdated
+
 ### Epic Tree (weekly only)
 
 ```bash

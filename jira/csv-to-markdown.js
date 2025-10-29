@@ -8,6 +8,10 @@ const config = require('../lib/config').load();
 const { getProjectFolder } = require('../lib/project-folder');
 const PROJECT_FOLDER = getProjectFolder(process.env.TEAM, config);
 const { getChangelogBullets } = require('./lib/changelog-markdown');
+const { loadFieldMap } = require('./lib/field-map');
+
+// Load field map once at startup (async initialization handled in processAllCsvFiles)
+let fieldMapPromise = null;
 
 /**
  * Parse complex JSON fields from Jira export
@@ -153,7 +157,7 @@ function extractFieldValue(value, fieldName) {
 /**
  * Extract custom fields (excluding standard fields)
  */
-function extractCustomFields(ticket) {
+function extractCustomFields(ticket, fieldMap = {}) {
   const customFields = [];
   const excludedFields = new Set([
     'Summary', 'Issue key', 'Issue id', 'Issue Type', 'Status',
@@ -184,6 +188,11 @@ function extractCustomFields(ticket) {
       if (fieldName.startsWith('Custom field (') && fieldName.endsWith(')')) {
         fieldName = fieldName.slice(14, -1); // Remove "Custom field (" and ")"
       }
+      
+      // Resolve customfield_* IDs to friendly names
+      if (/^customfield_\d+$/.test(key)) {
+        fieldName = fieldMap[key] || key;
+      }
 
       customFields.push({
         label: fieldName,
@@ -198,7 +207,7 @@ function extractCustomFields(ticket) {
 /**
  * Format a single ticket to markdown (following jiraTicketsConverter format)
  */
-function formatTicket(ticket) {
+function formatTicket(ticket, fieldMap = {}) {
   let markdown = '';
   
   // Title with issue key + summary
@@ -256,7 +265,7 @@ function formatTicket(ticket) {
   }
   
   // Custom fields - include all custom field data
-  const customFields = extractCustomFields(ticket);
+  const customFields = extractCustomFields(ticket, fieldMap);
   if (customFields.length > 0) {
     markdown += `#### Custom Fields\n\n`;
     customFields.forEach(field => {
@@ -382,7 +391,7 @@ function mapFieldNames(ticket) {
 /**
  * Convert a CSV file to markdown
  */
-async function convertCsvToMarkdown(csvFile, outputFile) {
+async function convertCsvToMarkdown(csvFile, outputFile, fieldMap = {}) {
   return new Promise((resolve, reject) => {
     const tickets = [];
     
@@ -438,7 +447,7 @@ async function convertCsvToMarkdown(csvFile, outputFile) {
           markdown += `## ${status} (${statusTickets.length})\n\n`;
           
           statusTickets.forEach(ticket => {
-            markdown += formatTicket(ticket);
+            markdown += formatTicket(ticket, fieldMap);
           });
         });
         
@@ -459,6 +468,9 @@ async function convertCsvToMarkdown(csvFile, outputFile) {
  * Main function to process all CSV files
  */
 async function processAllCsvFiles() {
+  // Load field map once at startup
+  const fieldMap = await loadFieldMap();
+  
   const inputDir = path.join(__dirname, 'data', PROJECT_FOLDER, 'by-assignee');
   const outputDir = path.join(__dirname, 'md_output', PROJECT_FOLDER, 'by-assignee');
   
@@ -493,7 +505,7 @@ async function processAllCsvFiles() {
     console.log(`Converting ${csvFile}...`);
     
     try {
-      const result = await convertCsvToMarkdown(inputPath, outputPath);
+      const result = await convertCsvToMarkdown(inputPath, outputPath, fieldMap);
       console.log(`  ✓ Converted ${result.ticketCount} tickets to ${outputFileName}`);
     } catch (error) {
       console.error(`  ✗ Error converting ${csvFile}:`, error.message);

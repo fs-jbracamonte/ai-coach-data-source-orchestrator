@@ -129,9 +129,9 @@ Generated files will be placed in `datasource-generator/output/<projectFolder>/`
 The project folder is configured in `team-name-mapping.json`.
 
 Each individual file contains:
-- `DAILY_TEXT` - Daily reports specific to the team member
+- `DAILY_TEXT` - Daily reports specific to the team member (date-filtered to `dailyReports.query.report_date_start` to `report_date_end`)
 - `JIRA_TEXT` - JIRA tickets assigned to the team member
-- `FATHOM_TEXT` - All meeting transcripts (shared across team members)
+- `FATHOM_TEXT` - All meeting transcripts (shared across team members, date-filtered if `transcripts.dateFilter.enabled`)
 
 ### Team Datasource
 
@@ -142,7 +142,7 @@ The team datasource file will be placed in `datasource-generator/output/`:
 
 Each team file contains:
 - `JIRA_DATA` - Complete team report with all tickets and statistics
-- `TRANSCRIPT_DATA` - All meeting transcripts from configured folders
+- `TRANSCRIPT_DATA` - All meeting transcripts from configured folders (date-filtered if `transcripts.dateFilter.enabled`)
 - Helper functions for searching and analyzing the data
 
 ### Weekly Digest Datasource
@@ -154,11 +154,35 @@ The weekly digest file will be placed in `datasource-generator/output/`:
 
 Each weekly digest file contains:
 - `JIRA_DATA` - Individual JIRA reports for configured team members only (unassigned tickets excluded)
-- `DAILY_REPORTS_DATA` - Concatenated daily reports for all configured employees
-- `TRANSCRIPT_DATA` - All meeting transcripts from configured folders
+- `DAILY_REPORTS_DATA` - Concatenated daily reports for all configured employees (date-filtered to `dailyReports.query` range)
+- `TRANSCRIPT_DATA` - All meeting transcripts from configured folders (date-filtered if `transcripts.dateFilter.enabled`)
   - Slack (dashboard/weekly when enabled) is read only from `slack/md-output/{projectFolder}/sanitized/*.md`
 - Helper functions for searching content and extracting summaries
 - Additional helper functions specific to daily reports and JIRA analysis
+
+### Final Date-Range Filtering
+
+All datasource generators apply final date-range filtering during generation to ensure only in-range content is included:
+
+**Transcripts**:
+- Controlled by `config.transcripts.dateFilter.enabled`, `startDate`, `endDate`
+- When enabled, only transcript files with dates within the range are included
+- Date extracted from filename (e.g., `fathom-transcripts-2025-10-13T07_16_03+00_00.md`)
+- Files with unparseable dates are excluded and logged as warnings (fail-closed)
+- Applies to: 1on1, team, weekly, and dashboard generators
+
+**Daily Reports**:
+- Controlled by `config.dailyReports.query.report_date_start` and `report_date_end`
+- Daily report markdown is trimmed to include only date sections within the range
+- Header blocks (title, employee, project) are preserved
+- Supports both heading formats: `## October 13, 2025` and `## 2025-10-13`
+- If no in-range sections remain, file is excluded or placeholder text is used
+- Applies to: 1on1, weekly, and dashboard generators
+
+**Implementation Notes**:
+- Filtering happens at datasource generation time, not during download/export
+- Upstream modules (daily-reports, transcripts) remain unchanged
+- Date filtering utilities are in `lib/date-range-filter.js`
 
 ## File Structure
 

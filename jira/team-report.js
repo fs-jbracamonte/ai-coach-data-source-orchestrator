@@ -8,6 +8,7 @@ const config = require('../lib/config').load();
 const { getProjectFolder } = require('../lib/project-folder');
 const PROJECT_FOLDER = getProjectFolder(process.env.TEAM, config);
 const { getChangelogBullets } = require('./lib/changelog-markdown');
+const { loadFieldMap } = require('./lib/field-map');
 
 /**
  * Parse complex JSON fields from Jira export
@@ -176,7 +177,7 @@ function extractFieldValue(value, fieldName) {
 /**
  * Extract custom fields (excluding standard fields)
  */
-function extractCustomFields(ticket) {
+function extractCustomFields(ticket, fieldMap = {}) {
   const customFields = [];
   const excludedFields = new Set([
     'Summary', 'Issue key', 'Issue id', 'Issue Type', 'Status',
@@ -207,6 +208,11 @@ function extractCustomFields(ticket) {
       if (fieldName.startsWith('Custom field (') && fieldName.endsWith(')')) {
         fieldName = fieldName.slice(14, -1); // Remove "Custom field (" and ")"
       }
+      
+      // Resolve customfield_* IDs to friendly names
+      if (/^customfield_\d+$/.test(key)) {
+        fieldName = fieldMap[key] || key;
+      }
 
       customFields.push({
         label: fieldName,
@@ -221,7 +227,7 @@ function extractCustomFields(ticket) {
 /**
  * Format a single ticket to markdown (full format same as individual reports)
  */
-function formatTicketCondensed(ticket) {
+function formatTicketCondensed(ticket, fieldMap = {}) {
   let markdown = '';
   
   // Title with issue key + summary
@@ -279,7 +285,7 @@ function formatTicketCondensed(ticket) {
   }
   
   // Custom fields - include all custom field data
-  const customFields = extractCustomFields(ticket);
+  const customFields = extractCustomFields(ticket, fieldMap);
   if (customFields.length > 0) {
     markdown += `##### Custom Fields\n\n`;
     customFields.forEach(field => {
@@ -405,7 +411,7 @@ function mapFieldNames(ticket) {
 /**
  * Generate team report from CSV file
  */
-async function generateTeamReport(csvFile, outputFile) {
+async function generateTeamReport(csvFile, outputFile, fieldMap = {}) {
   return new Promise((resolve, reject) => {
     const tickets = [];
     
@@ -516,7 +522,7 @@ async function generateTeamReport(csvFile, outputFile) {
           Object.keys(byAssignee).sort().forEach(assignee => {
             markdown += `**${assignee}** (${byAssignee[assignee].length} tickets)\n\n`;
             byAssignee[assignee].forEach(ticket => {
-              markdown += formatTicketCondensed(ticket);
+              markdown += formatTicketCondensed(ticket, fieldMap);
             });
           });
         });
@@ -559,6 +565,9 @@ async function generateTeamReport(csvFile, outputFile) {
  * Main function
  */
 async function main() {
+  // Load field map once at startup
+  const fieldMap = await loadFieldMap();
+  
   const dataDir = path.join(__dirname, 'data', PROJECT_FOLDER);
   const outputDir = path.join(__dirname, 'md_output', PROJECT_FOLDER);
   
@@ -587,7 +596,7 @@ async function main() {
   console.log(`Output file: ${outputFileName}`);
   
   try {
-    const result = await generateTeamReport(inputPath, outputPath);
+    const result = await generateTeamReport(inputPath, outputPath, fieldMap);
     console.log(`\n✓ Team report generated successfully!`);
     console.log(`  Total tickets: ${result.ticketCount}`);
     console.log(`  Output: ${path.relative(process.cwd(), outputPath)}`);

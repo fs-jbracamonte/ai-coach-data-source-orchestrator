@@ -62,6 +62,7 @@ desktop.ini
 # IDE files
 .vscode/
 .idea/
+.cursor/
 *.sublime-project
 *.sublime-workspace
 

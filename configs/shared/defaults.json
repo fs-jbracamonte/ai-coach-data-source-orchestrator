@@ -1,5 +1,5 @@
 {
-  "comment": "Shared defaults for configuration. This file is intended to be merged first, before team base configs and any report-specific overrides. It provides common transcript settings and date format examples.",
+  "comment": "Shared defaults for configuration. This file is intended to be merged first, before team base configs and any report-specific overrides. It provides common transcript settings and date format examples. For global transcript team filtering, set env TRANSCRIPTS_GLOBAL_TEAM_FILTER=true (applies minimumTeamMembersRequired to ALL folders).",
   "examples": {
     "dateFormat": "YYYY-MM-DD",
     "dailyReports": {

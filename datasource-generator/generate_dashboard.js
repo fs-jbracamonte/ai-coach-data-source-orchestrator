@@ -187,11 +187,26 @@ class DashboardGenerator {
 
     const { parseTranscriptDateFromFilename, isWithinRange } = require('./lib/date-range-filter');
     
-    // Check if date filtering is enabled
-    const dateFilter = config.transcripts?.dateFilter;
-    const filterEnabled = dateFilter?.enabled === true;
-    const startDate = dateFilter?.startDate;
-    const endDate = dateFilter?.endDate;
+    // Check if date filtering is enabled with fallback to Slack/JIRA dates
+    const tf = config.transcripts?.dateFilter;
+    const slackDF = config.slack?.dateFilter;
+    const jiraDF = { start_date: config.jira?.start_date, end_date: config.jira?.end_date };
+
+    let startDate = tf?.startDate || tf?.start_date;
+    let endDate = tf?.endDate || tf?.end_date;
+    let filterEnabled = tf?.enabled === true;
+
+    if (!filterEnabled && slackDF?.start_date && slackDF?.end_date) {
+      console.log('  Using Slack dateFilter as fallback for transcripts');
+      filterEnabled = true;
+      startDate = slackDF.start_date;
+      endDate = slackDF.end_date;
+    } else if (!filterEnabled && jiraDF.start_date && jiraDF.end_date) {
+      console.log('  Using JIRA date range as fallback for transcripts');
+      filterEnabled = true;
+      startDate = jiraDF.start_date;
+      endDate = jiraDF.end_date;
+    }
 
     // Check if there are subdirectories (when organizeByFolder is true)
     const items = fs.readdirSync(this.transcriptsDir);
@@ -259,6 +274,103 @@ class DashboardGenerator {
       console.warn(`Could not read file ${filePath}:`, error.message);
       return '';
     }
+  }
+
+  /**
+   * Get day of week name from ISO date string (UTC)
+   * @param {string} dateStr - ISO date string (YYYY-MM-DD)
+   * @returns {string} - Day name (Monday-Sunday) or 'Unknown'
+   */
+  getDayOfWeek(dateStr) {
+    if (!dateStr) return 'Unknown';
+    const d = new Date(dateStr + 'T00:00:00Z');
+    if (isNaN(d.getTime())) return 'Unknown';
+    const names = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return names[d.getUTCDay()];
+  }
+
+  /**
+   * Resolve dashboard week bounds and normalize to Monday..Sunday frame.
+   * Prefers transcripts.dateFilter, then slack.dateFilter, then JIRA start/end.
+   * Returns { weekStartIso, weekEndIso } or {null,null} if not resolvable.
+   */
+  getDashboardWeekBounds() {
+    const tf = config.transcripts?.dateFilter;
+    const slackDF = config.slack?.dateFilter;
+    const jiraDF = { start: config.jira?.start_date, end: config.jira?.end_date };
+
+    let start = tf?.startDate || tf?.start_date || slackDF?.start_date || jiraDF.start || null;
+    let end = tf?.endDate || tf?.end_date || slackDF?.end_date || jiraDF.end || null;
+    if (!start || !end) return { weekStartIso: null, weekEndIso: null };
+
+    // Normalize to the Monday of the start date, and Sunday at the end of that week
+    const startDate = new Date(start + 'T00:00:00Z');
+    const day = startDate.getUTCDay(); // 0=Sun..6=Sat
+    const diffToMonday = (day + 6) % 7; // Monday=0
+    const monday = new Date(startDate);
+    monday.setUTCDate(startDate.getUTCDate() - diffToMonday);
+    const sunday = new Date(monday);
+    sunday.setUTCDate(monday.getUTCDate() + 6);
+
+    const fmt = (x) => x.toISOString().slice(0,10);
+    return { weekStartIso: fmt(monday), weekEndIso: fmt(sunday) };
+  }
+
+  /**
+   * Build a stable Monday..Sunday frame [{day,date,transcripts:[]} x7]
+   */
+  buildWeeklyFrame(weekStartIso) {
+    if (!weekStartIso) return [];
+    const frame = [];
+    const monday = new Date(weekStartIso + 'T00:00:00Z');
+    const namesMonFirst = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setUTCDate(monday.getUTCDate() + i);
+      const iso = d.toISOString().slice(0,10);
+      frame.push({ day: namesMonFirst[i], date: iso, transcripts: [] });
+    }
+    return frame;
+  }
+
+  /**
+   * Group transcripts by day of week
+   * Returns: {byDay: Array, unknownDate: Array}
+   * byDay format: [{day: 'Monday', date: '2025-09-15', transcripts: ['content1', ...]}, ...]
+   */
+  groupTranscriptsByDay(transcriptFiles) {
+    const { parseTranscriptDateFromFilename } = require('./lib/date-range-filter');
+    
+    // Get week bounds and build stable frame
+    const { weekStartIso } = this.getDashboardWeekBounds();
+    const frame = this.buildWeeklyFrame(weekStartIso);
+    const unknownDate = [];
+    
+    // Build a map for quick lookup
+    const dateMap = new Map();
+    frame.forEach(entry => {
+      dateMap.set(entry.date, entry);
+    });
+    
+    transcriptFiles.forEach(file => {
+      const content = this.readFileContent(path.join(this.transcriptsDir, file));
+      if (!content) return;
+      
+      const date = parseTranscriptDateFromFilename(file);
+      
+      if (!date) {
+        // Cannot parse date - add to unknown
+        unknownDate.push({ filename: file, content });
+        return;
+      }
+      
+      // Add to the appropriate day if it exists in the week frame
+      if (dateMap.has(date)) {
+        dateMap.get(date).transcripts.push(content);
+      }
+    });
+    
+    return { byDay: frame, unknownDate };
   }
 
   /**
@@ -331,6 +443,17 @@ class DashboardGenerator {
     const transcriptFiles = this.getTranscriptFiles();
     console.log(`Found ${transcriptFiles.length} transcript files`);
 
+    // Group transcripts by day for structured access
+    const { byDay: transcriptsByDay, unknownDate: transcriptsUnknownDate } = 
+      this.groupTranscriptsByDay(transcriptFiles);
+
+    // Warn about unparseable dates
+    if (transcriptsUnknownDate.length > 0) {
+      console.warn(`⚠ Found ${transcriptsUnknownDate.length} transcript(s) with unparseable dates:`);
+      transcriptsUnknownDate.forEach(t => console.warn(`  - ${t.filename}`));
+    }
+
+    // Build combined transcript content (existing format)
     let transcriptContent = '';
     transcriptFiles.forEach(file => {
       const content = this.readFileContent(path.join(this.transcriptsDir, file));
@@ -339,6 +462,17 @@ class DashboardGenerator {
         transcriptContent += content;
         transcriptContent += '\n\n---\n\n';
       }
+    });
+
+    // Build per-day transcript content (new format - native Python)
+    let transcriptByDayContent = JSON.stringify(transcriptsByDay, null, 2);
+
+    // Build unknown date transcript content (new format)
+    let transcriptUnknownDateContent = '';
+    transcriptsUnknownDate.forEach(t => {
+      transcriptUnknownDateContent += `\n# Transcript: ${t.filename}\n\n`;
+      transcriptUnknownDateContent += t.content;
+      transcriptUnknownDateContent += '\n\n---\n\n';
     });
 
     // Get all Slack files (optional)
@@ -377,6 +511,19 @@ class DashboardGenerator {
     pythonContent += transcriptContent.replace(/"""/g, '\\"""');
     pythonContent += '"""\n\n';
 
+    // Add per-day transcript data (NEW - native Python list)
+    pythonContent += '# Transcripts grouped by day of week (Monday-Sunday)\n';
+    pythonContent += '# Format: [{"day": "Monday", "date": "YYYY-MM-DD", "transcripts": ["...", ...]}, ...]\n';
+    pythonContent += 'TRANSCRIPT_DATA_BY_DAY = ';
+    pythonContent += transcriptByDayContent;
+    pythonContent += '\n\n';
+
+    // Add unknown date transcripts (NEW)
+    pythonContent += '# Transcripts with unparseable dates\n';
+    pythonContent += 'TRANSCRIPTS_WITH_UNKNOWN_DATE = """';
+    pythonContent += transcriptUnknownDateContent.replace(/"""/g, '\\"""');
+    pythonContent += '"""\n\n';
+
     // Add Slack data
     pythonContent += 'SLACK_DATA = """';
     pythonContent += slackContent.replace(/"""/g, '\\"""');
@@ -405,6 +552,8 @@ class DashboardGenerator {
     console.log(`- JIRA content: ${jiraFile ? 'Included' : 'None'}`);
     console.log(`- Daily reports: ${dailyReportFiles.length} files included`);
     console.log(`- Transcripts: ${transcriptFiles.length} files included`);
+    console.log(`  - By day: ${transcriptsByDay.length} days with transcripts`);
+    console.log(`  - Unknown dates: ${transcriptsUnknownDate.length} files`);
     console.log(`- Slack: ${slackFiles.length} files included`);
     console.log(`- Output file: ${outputFileName}`);
     
@@ -413,17 +562,23 @@ class DashboardGenerator {
     const jiraChars = jiraContent.length;
     const dailyChars = dailyReportContent.length;
     const transcriptChars = transcriptContent.length;
+    const transcriptByDayChars = transcriptByDayContent.length;
+    const transcriptUnknownChars = transcriptUnknownDateContent.length;
     const slackChars = slackContent.length;
     const jiraTokens = estimateTokens(jiraChars);
     const dailyTokens = estimateTokens(dailyChars);
     const transcriptTokens = estimateTokens(transcriptChars);
+    const transcriptByDayTokens = estimateTokens(transcriptByDayChars);
+    const transcriptUnknownTokens = estimateTokens(transcriptUnknownChars);
     const slackTokens = estimateTokens(slackChars);
     console.log('- Token estimates (approx):');
     console.log(`  JIRA_DATA: ${jiraChars} chars ≈ ${jiraTokens} tokens`);
     console.log(`  DAILY_REPORTS_DATA: ${dailyChars} chars ≈ ${dailyTokens} tokens`);
     console.log(`  TRANSCRIPT_DATA: ${transcriptChars} chars ≈ ${transcriptTokens} tokens`);
+    console.log(`  TRANSCRIPT_DATA_BY_DAY: ${transcriptByDayChars} chars ≈ ${transcriptByDayTokens} tokens`);
+    console.log(`  TRANSCRIPTS_WITH_UNKNOWN_DATE: ${transcriptUnknownChars} chars ≈ ${transcriptUnknownTokens} tokens`);
     console.log(`  SLACK_DATA: ${slackChars} chars ≈ ${slackTokens} tokens`);
-    console.log(`  Total: ≈ ${jiraTokens + dailyTokens + transcriptTokens + slackTokens} tokens`);
+    console.log(`  Total: ≈ ${jiraTokens + dailyTokens + transcriptTokens + transcriptByDayTokens + transcriptUnknownTokens + slackTokens} tokens`);
   }
 
   /**

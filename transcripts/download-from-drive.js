@@ -26,6 +26,10 @@ const CONVERT_TO_MARKDOWN = config.transcripts.convertToMarkdown || false;
 const MARKDOWN_OUTPUT_DIR = path.join(config.transcripts.markdownOutputDir || './markdown-output', PROJECT_FOLDER);
 const ORGANIZE_BY_FOLDER = config.transcripts.organizeByFolder || false;
 
+// Global team filter flag (env-controlled)
+const GLOBAL_TEAM_FILTER_ENABLED = process.env.TRANSCRIPTS_GLOBAL_TEAM_FILTER === 'true' || 
+                                   process.env.TRANSCRIPTS_GLOBAL_TEAM_FILTER === '1';
+
 // Sanitize filename for Windows/cross-platform compatibility
 function sanitizeFilename(filename) {
   if (!SANITIZE_FILENAMES) return filename;
@@ -302,6 +306,8 @@ async function listFilesInFolder(drive, folderId) {
       q: `'${folderId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed = false`,
       fields: 'files(id, name, mimeType, size, modifiedTime)',
       pageSize: 1000,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true
     });
 
     return res.data.files;
@@ -358,7 +364,8 @@ async function getFolderName(drive, folderId) {
   try {
     const res = await drive.files.get({
       fileId: folderId,
-      fields: 'name'
+      fields: 'name',
+      supportsAllDrives: true
     });
     return res.data.name;
   } catch (error) {
@@ -383,7 +390,12 @@ async function downloadFilesFromFolder(drive, folderId, folderName, prefix = '')
     let teamFilterActive = false;
     let teamMappingLoaded = null;
     
-    if (filterByTeam && teamMembers.length > 0 && isMultiProjectFolder) {
+    // Determine if team filtering should be active for this folder
+    // Either: (1) Legacy per-folder mode, or (2) Global env flag is ON
+    const shouldActivateFilter = (filterByTeam && teamMembers.length > 0 && isMultiProjectFolder) ||
+                                  (GLOBAL_TEAM_FILTER_ENABLED && teamMembers.length > 0);
+    
+    if (shouldActivateFilter) {
       // Try to load team mapping file
       const mappingFile = config.transcripts.teamMappingFile || 'datasource-generator/team-name-mapping.json';
       
@@ -409,7 +421,11 @@ async function downloadFilesFromFolder(drive, folderId, folderName, prefix = '')
     // Log folder processing with filtering status
     if (teamFilterActive) {
       console.log(`\n📁 Folder: ${folderName} (${folderId})`);
-      console.log(`   Multi-project folder - team filtering ACTIVE`);
+      if (GLOBAL_TEAM_FILTER_ENABLED) {
+        console.log(`   Team filtering ACTIVE (global filter enabled)`);
+      } else {
+        console.log(`   Multi-project folder - team filtering ACTIVE`);
+      }
     } else if (isMultiProjectFolder) {
       console.log(`\n📁 Folder: ${folderName} (${folderId})`);
       console.log(`   Multi-project folder - team filtering NOT CONFIGURED`);
@@ -531,15 +547,27 @@ async function downloadFilesFromFolder(drive, folderId, folderName, prefix = '')
           );
           
           shouldInclude = filterResult.shouldInclude;
-          
+
+          // Default safeguard: only allow exclusion for 1:1 (≤ 2 participants)
+          // Do NOT bypass exclusion for cross-team meetings (require at least 1 match)
+          const matchedCount = (filterResult && typeof filterResult.matchedCount === 'number')
+            ? filterResult.matchedCount
+            : (Array.isArray(filterResult?.matches) ? filterResult.matches.length : 0);
+          if (!shouldInclude && Array.isArray(participants) && participants.length > 2 && matchedCount > 0) {
+            console.warn(`  ⚠ Bypassing exclusion (participants=${participants.length}, matched=${matchedCount}): ${safeFilename}`);
+            shouldInclude = true;
+          }
+
           if (!shouldInclude) {
             teamFilterStats.excluded++;
-            console.log(`  ⊘ Final skip: ${safeFilename} - ${filterResult.matches.length}/${minimumRequired} team members (${filterResult.matches.join(', ') || 'none'})`);
+            const plist = Array.isArray(participants) ? participants.slice(0, 6).join(', ') : 'n/a';
+            console.log(`  ⊘ Final skip: ${safeFilename} - ${matchedCount}/${minimumRequired} team members (${filterResult.matches.join(', ') || 'none'}) [participants=${participants.length}; ${plist}]`);
             // Delete the downloaded file since it doesn't meet criteria
             fs.unlinkSync(downloadPath);
             continue; // Skip conversion
           } else {
-            console.log(`  ✓ Final match: ${safeFilename} - ${filterResult.matches.length} team members (${filterResult.matches.join(', ')})`);
+            const plist = Array.isArray(participants) ? participants.slice(0, 6).join(', ') : 'n/a';
+            console.log(`  ✓ Final include: ${safeFilename} - matched=${matchedCount}/${minimumRequired} [participants=${participants.length}; ${plist}]`);
           }
         } catch (filterError) {
           // If filtering fails, include by default (fail-open)
@@ -688,7 +716,13 @@ async function main() {
     const filterByTeam = config.transcripts.filterByTeamMembers || false;
     const minRequired = config.transcripts.minimumTeamMembersRequired || 1;
     
-    if (filterByTeam && teamMembers.length > 0 && multiProjectFolders.length > 0) {
+    if (GLOBAL_TEAM_FILTER_ENABLED && teamMembers.length > 0) {
+      console.log(`\n👥 Team filtering: ENABLED GLOBALLY (env flag set)`);
+      console.log(`   Applies to: ALL folders (${FOLDER_IDS.length} configured)`);
+      console.log(`   Team members configured: ${teamMembers.length} members`);
+      console.log(`   Minimum team members required: ${minRequired}`);
+      console.log(`   Team mapping file: ${config.transcripts.teamMappingFile || 'team-name-mapping.json'}`);
+    } else if (filterByTeam && teamMembers.length > 0 && multiProjectFolders.length > 0) {
       console.log(`\n👥 Team filtering: ENABLED for ${multiProjectFolders.length} multi-project folder(s)`);
       console.log(`   Multi-project folders: ${multiProjectFolders.join(', ')}`);
       console.log(`   Team members configured: ${teamMembers.length} members`);
@@ -698,8 +732,10 @@ async function main() {
       console.log(`\n👥 Team filtering: CONFIGURED but no multi-project folders specified`);
       console.log(`   Team members configured: ${teamMembers.length} members`);
       console.log(`   Note: Filtering only applies to folders listed in multiProjectFolders`);
+      console.log(`   Tip: Set TRANSCRIPTS_GLOBAL_TEAM_FILTER=true to apply to all folders`);
     } else {
-      console.log(`\n👥 Team filtering: DISABLED (no multi-project folders configured)`);
+      console.log(`\n👥 Team filtering: DISABLED`);
+      console.log(`   Tip: Set TRANSCRIPTS_GLOBAL_TEAM_FILTER=true to enable global filtering`);
     }
     
     await downloadFilesWithPrefix(drive, FOLDER_IDS, FILE_PREFIX);

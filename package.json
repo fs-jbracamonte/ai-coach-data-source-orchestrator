@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "npm run test:name-matcher && npm run test:error-handling && npm run test:date-extraction && npm run test:content-search",
+    "test": "npm run test:name-matcher && npm run test:error-handling && npm run test:date-extraction && npm run test:content-search && npm run test:global-team-filter",
     "test:changelog-flatten": "node test/test-changelog-flatten.js",
     "test:jira-changelog-client": "node test/test-jira-changelog-client.js",
     "test:changelog-integration": "node test/test-changelog-integration.js",
@@ -17,6 +17,7 @@
     "test:all-datasource-generators": "node test/test-all-datasource-generators.js",
     "test:date-extraction": "node test/test-date-extraction.js",
     "test:content-search": "node test/test-content-search.js",
+    "test:global-team-filter": "node test/test-global-team-filter.js",
     "demo:name-matcher": "node test/demo-name-matcher.js",
     "jira:export": "node jira/export-to-csv.js",
     "jira:split": "node jira/split-by-assignee.js",

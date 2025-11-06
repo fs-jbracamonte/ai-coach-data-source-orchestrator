@@ -84,6 +84,8 @@
     "engagepath:slack:users": "cross-env TEAM=engagepath REPORT_TYPE=dashboard node slack/build-user-map.js",
     "engagepath:dashboard": "node datasource-generator/generate_dashboard.js --team engagepath --report dashboard",
     "aicoach:dashboard": "node datasource-generator/generate_dashboard.js --team aicoach --report dashboard",
+    "timeclock:dashboard": "node datasource-generator/generate_dashboard.js --team timeclock --report dashboard",
+    "rocks:dashboard": "node datasource-generator/generate_dashboard.js --team rocks --report dashboard",
     "timeclock:1on1": "node datasource-generator/generate_datasources.js --team timeclock --report 1on1",
     "timeclock:team": "node datasource-generator/generate_team_datasource.js --team timeclock --report team",
     "timeclock:weekly": "node datasource-generator/generate_weekly_digest.js --team timeclock --report weekly",

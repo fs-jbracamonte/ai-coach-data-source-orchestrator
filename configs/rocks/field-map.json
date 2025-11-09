@@ -1,5 +1,5 @@
 {
-  "timestamp": 1762082736067,
+  "timestamp": 1762536129033,
   "fieldMap": {
     "statuscategorychangedate": "Status Category Changed",
     "customfield_10191": "Severity",
@@ -18,8 +18,8 @@
     "customfield_10078": "Design",
     "customfield_10232": "Delivery progress",
     "parent": "Parent",
-    "customfield_10233": "Delivery status",
     "resolution": "Resolution",
+    "customfield_10233": "Delivery status",
     "customfield_10356": "Effort in Hours",
     "customfield_10225": "Idea archived by",
     "customfield_10226": "Idea archived on",
@@ -37,8 +37,8 @@
     "customfield_10067": "Project target",
     "customfield_10068": "Category",
     "customfield_10069": "Value",
-    "customfield_10224": "Idea archived",
     "labels": "Labels",
+    "customfield_10224": "Idea archived",
     "timeestimate": "Remaining Estimate",
     "aggregatetimeoriginalestimate": "Σ Original Estimate",
     "versions": "Affects versions",

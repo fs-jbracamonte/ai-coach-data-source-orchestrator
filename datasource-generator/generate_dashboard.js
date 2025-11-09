@@ -603,7 +603,7 @@ class DashboardGenerator {
       await this.runCommand('npm', ['run', 'transcripts:download']);
 
       // Step 4: Run Slack download (if configured)
-      if (config.slack) {
+      if (config.slack && config.slack.botTokenEnv && config.slack.channels && config.slack.dateFilter) {
         console.log('\n=== Step 4: Downloading Slack data ===');
         try {
           await this.runCommand('npm', ['run', 'slack:all']);

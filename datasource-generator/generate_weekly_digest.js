@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -765,6 +767,8 @@ def get_employee_reports(employee_name):
     console.log(`  DAILY_REPORTS_DATA: ${dailyChars} chars ≈ ${dailyTokens} tokens`);
     console.log(`  TRANSCRIPT_DATA: ${transcriptChars} chars ≈ ${transcriptTokens} tokens`);
     console.log(`  Total: ≈ ${jiraTokens + dailyTokens + transcriptTokens} tokens`);
+    
+    return outputPath;
   }
 
   /**
@@ -803,7 +807,11 @@ def get_employee_reports(employee_name):
 
       // Step 4: Generate the datasource file
       console.log('\n=== Step 4: Creating weekly digest datasource file ===');
-      this.generateWeeklyDigest();
+      const outputPath = this.generateWeeklyDigest();
+
+      // Step 5: Extract Jira data and upload to Vercel Blob
+      console.log('\n=== Step 5: Upload to Vercel Blob (if enabled) ===');
+      await this.uploadToVercelBlob(outputPath);
 
       console.log('\n✓ Weekly digest generation completed successfully!');
     } catch (error) {
@@ -812,6 +820,40 @@ def get_employee_reports(employee_name):
         operation: 'generate-weekly-digest',
         configFile: process.env.CONFIG_FILE || 'config.json'
       });
+    }
+  }
+
+  /**
+   * Upload markdown outputs and extracted Jira data to Vercel Blob
+   */
+  async uploadToVercelBlob(datasourcePath) {
+    try {
+      const { uploadAllData } = require('../lib/vercel-blob-uploader');
+      const { extractAndSave } = require('../lib/jira-data-extractor');
+      const { getProjectFolder } = require('../lib/project-folder');
+      
+      const projectFolder = getProjectFolder(process.env.TEAM, config);
+      
+      // Extract Jira data from datasource.py
+      const jiraDataFile = extractAndSave(
+        datasourcePath,
+        this.jiraDir,
+        config,
+        'weekly'
+      );
+      
+      // Upload all data
+      await uploadAllData({
+        projectFolder,
+        config,
+        transcriptsDir: this.transcriptsDir,
+        dailyReportsDir: this.dailyReportsDir,
+        slackDir: this.slackDir,
+        jiraDataFile
+      });
+    } catch (error) {
+      console.warn('⚠ Vercel Blob upload failed (non-fatal):', error.message);
+      console.warn('Continuing without upload...');
     }
   }
 }

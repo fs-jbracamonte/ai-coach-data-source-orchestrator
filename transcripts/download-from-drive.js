@@ -148,33 +148,36 @@ function extractDateFromFilename(filename) {
 
 /**
  * Check if a file is within the specified date range.
- * Priority:
- * 1. Try to extract date from filename (most reliable)
- * 2. Fall back to file's modified date (less reliable due to user modifications)
+ * Uses OR logic: file is included if filename date OR modified date is within range.
+ * Both dates are checked independently - modified date is not a fallback.
  * 
  * @param {string} filename - The filename to check
  * @param {string} modifiedTime - The file's modified timestamp
  * @param {string} startDate - Start date (YYYY-MM-DD)
  * @param {string} endDate - End date (YYYY-MM-DD)
- * @returns {boolean} - True if file is within range
+ * @returns {boolean} - True if filename date OR modified date is within range
  */
 function isWithinDateRange(filename, modifiedTime, startDate, endDate) {
-  // First, try to extract date from filename
-  let fileDate = extractDateFromFilename(filename);
-  
-  // If no date in filename, fall back to modified date
-  if (!fileDate) {
-    fileDate = new Date(modifiedTime);
-  }
-  
   const start = parseDate(startDate);
   const end = getEndOfDay(endDate);
   
   if (!start && !end) return true; // No date filter
-  if (start && fileDate < start) return false;
-  if (end && fileDate > end) return false;
   
-  return true;
+  // Extract filename date (may be null)
+  const filenameDate = extractDateFromFilename(filename);
+  
+  // Check filename date if it exists
+  let filenameInRange = false;
+  if (filenameDate) {
+    filenameInRange = (!start || filenameDate >= start) && (!end || filenameDate <= end);
+  }
+  
+  // Check modified date
+  const modifiedDate = new Date(modifiedTime);
+  const modifiedInRange = (!start || modifiedDate >= start) && (!end || modifiedDate <= end);
+  
+  // Return true if EITHER date is within range
+  return filenameInRange || modifiedInRange;
 }
 
 // Convert transcript file to markdown

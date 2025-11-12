@@ -39,6 +39,11 @@ transcripts/downloads/*
 transcripts/markdown-output/*
 !transcripts/markdown-output/.gitkeep
 
+slack/data/*
+!slack/data/.gitkeep
+slack/md-output/*
+!slack/md-output/.gitkeep
+
 # Other data directories (completely ignored)
 output/
 outputs/

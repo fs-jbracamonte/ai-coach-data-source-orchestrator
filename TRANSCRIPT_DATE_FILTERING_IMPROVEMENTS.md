@@ -9,7 +9,7 @@ Enhanced the transcript download module to use robust filename-based date extrac
 - Files may be edited or modified after creation
 - The actual meeting date is in the filename, not the file metadata
 
-**Solution**: Extract dates directly from filenames using multiple format parsers, with fallback to modified date when no date is found in the filename.
+**Solution**: Extract dates directly from filenames using multiple format parsers, with OR logic that checks both filename date and modified date independently.
 
 ## Changes Made
 
@@ -44,19 +44,21 @@ extractDateFromFilename('transcript-09_24_2025.txt')
 // Returns: Date(2025, 8, 24) = September 24, 2025
 
 extractDateFromFilename('no_date_here.txt')
-// Returns: null (falls back to modified date)
+// Returns: null (modified date will be checked independently via OR logic)
 ```
 
 #### Updated Function: `isWithinDateRange(filename, modifiedTime, startDate, endDate)`
-**Priority Logic**:
-1. **First**: Try to extract date from filename using `extractDateFromFilename()`
-2. **Fallback**: Use file's `modifiedTime` if no date found in filename
-3. **Compare**: Check if date falls within configured date range
+**OR Logic**:
+1. **Extract**: Try to extract date from filename using `extractDateFromFilename()` (may return null)
+2. **Check filename date**: If filename date exists, check if it's within the date range
+3. **Check modified date**: Independently check if file's `modifiedTime` is within the date range
+4. **Include if either matches**: File is downloaded if filename date OR modified date is within range
 
 **Benefits**:
-- More reliable - uses actual meeting date from filename
-- Immune to file modifications
-- Still works for files without dates in filename (uses modified date)
+- More reliable - uses actual meeting date from filename when available
+- More permissive - downloads files that match either criteria
+- Still works for files without dates in filename (checks modified date independently)
+- Modified date is not a fallback but an alternative criteria
 
 ### 2. Enhanced Prefix Filtering
 
@@ -180,10 +182,11 @@ const day = extractedDate.getDate();
 
 ### Graceful Degradation
 
-**Fallback Behavior**:
-- If no date in filename → use modified date (old behavior)
+**OR Logic Behavior**:
+- If no date in filename → only modified date is checked
 - If date extraction fails → try next pattern
-- If all patterns fail → use modified date
+- If all patterns fail → only modified date is checked
+- File is included if filename date OR modified date matches (both checked independently)
 - System never crashes due to date parsing errors
 
 ## Files Modified

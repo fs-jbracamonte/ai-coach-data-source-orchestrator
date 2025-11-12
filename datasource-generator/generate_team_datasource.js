@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -344,6 +346,8 @@ def search_content(keyword, data_type="all"):
     console.log(`- JIRA content: ${jiraContent ? 'Included' : 'Not found'}`);
     console.log(`- Transcripts: ${transcriptFiles.length} files included`);
     console.log(`- Output file: ${outputFileName}`);
+    
+    return outputPath;
   }
 
   /**
@@ -363,7 +367,11 @@ def search_content(keyword, data_type="all"):
 
       // Step 3: Generate the datasource file
       console.log('\n=== Step 3: Creating team datasource file ===');
-      this.generateTeamDatasource();
+      const outputPath = this.generateTeamDatasource();
+
+      // Step 4: Extract Jira data and upload to Vercel Blob
+      console.log('\n=== Step 4: Upload to Vercel Blob (if enabled) ===');
+      await this.uploadToVercelBlob(outputPath);
 
       console.log('\n✓ Team datasource generation completed successfully!');
     } catch (error) {
@@ -372,6 +380,40 @@ def search_content(keyword, data_type="all"):
         operation: 'generate-team-datasource',
         configFile: process.env.CONFIG_FILE || 'config.json'
       });
+    }
+  }
+
+  /**
+   * Upload markdown outputs and extracted Jira data to Vercel Blob
+   */
+  async uploadToVercelBlob(datasourcePath) {
+    try {
+      const { uploadAllData } = require('../lib/vercel-blob-uploader');
+      const { extractAndSave } = require('../lib/jira-data-extractor');
+      const { getProjectFolder } = require('../lib/project-folder');
+      
+      const projectFolder = getProjectFolder(process.env.TEAM, config);
+      
+      // Extract Jira data from datasource.py
+      const jiraDataFile = extractAndSave(
+        datasourcePath,
+        this.jiraDir,
+        config,
+        'team'
+      );
+      
+      // Upload all data
+      await uploadAllData({
+        projectFolder,
+        config,
+        transcriptsDir: this.transcriptsDir,
+        dailyReportsDir: null, // Team report typically doesn't include daily reports
+        slackDir: null, // Team report typically doesn't include Slack
+        jiraDataFile
+      });
+    } catch (error) {
+      console.warn('⚠ Vercel Blob upload failed (non-fatal):', error.message);
+      console.warn('Continuing without upload...');
     }
   }
 }

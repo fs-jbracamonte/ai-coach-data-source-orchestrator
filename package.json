@@ -103,6 +103,7 @@
   "license": "ISC",
   "dependencies": {
     "@secretlint/secretlint-rule-preset-recommend": "^11.2.5",
+    "@vercel/blob": "^2.0.0",
     "csv-parser": "^3.2.0",
     "csv-writer": "^1.6.0",
     "dotenv": "^17.2.2",

@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -438,6 +440,10 @@ class DatasourceGenerator {
       console.log('\n=== Generation Complete ===\n');
       console.log(`Generated ${generatedFiles.length} datasource files:`);
       generatedFiles.forEach(f => console.log(`  - ${path.basename(f)}`));
+
+      // Step 3: Extract Jira data and upload to Vercel Blob
+      console.log('\n=== Upload to Vercel Blob (if enabled) ===');
+      await this.uploadToVercelBlob(generatedFiles);
       
     } catch (error) {
       handleError(error, {
@@ -445,6 +451,60 @@ class DatasourceGenerator {
         operation: 'generate-datasources',
         configFile: process.env.CONFIG_FILE || 'config.json'
       });
+    }
+  }
+
+  /**
+   * Upload markdown outputs and extracted Jira data to Vercel Blob
+   */
+  async uploadToVercelBlob(generatedFiles) {
+    try {
+      const { uploadAllData } = require('../lib/vercel-blob-uploader');
+      const { extractFromDirectory } = require('../lib/jira-data-extractor');
+      const { getProjectFolder } = require('../lib/project-folder');
+      
+      const projectFolder = getProjectFolder(process.env.TEAM, config);
+      
+      // Extract Jira data from all datasource.py files
+      const extractedFiles = extractFromDirectory(
+        this.outputDir,
+        this.jiraDir,
+        config,
+        '1on1'
+      );
+      
+      // Upload all data (for 1on1, we upload each extracted Jira file separately)
+      // We'll upload transcripts and daily reports once, then each Jira data file
+      if (extractedFiles.length > 0) {
+        // Upload transcripts and daily reports (shared across all members)
+        await uploadAllData({
+          projectFolder,
+          config,
+          transcriptsDir: this.transcriptsDir,
+          dailyReportsDir: this.dailyReportsDir,
+          slackDir: null, // 1on1 typically doesn't include Slack
+          jiraDataFile: null // We'll upload Jira files separately
+        });
+
+        // Upload each extracted Jira data file
+        const { uploadJiraData } = require('../lib/vercel-blob-uploader');
+        for (const jiraDataFile of extractedFiles) {
+          await uploadJiraData(jiraDataFile, projectFolder, config);
+        }
+      } else {
+        // Just upload transcripts and daily reports
+        await uploadAllData({
+          projectFolder,
+          config,
+          transcriptsDir: this.transcriptsDir,
+          dailyReportsDir: this.dailyReportsDir,
+          slackDir: null,
+          jiraDataFile: null
+        });
+      }
+    } catch (error) {
+      console.warn('⚠ Vercel Blob upload failed (non-fatal):', error.message);
+      console.warn('Continuing without upload...');
     }
   }
 }

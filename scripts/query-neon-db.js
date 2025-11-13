@@ -38,7 +38,7 @@ async function queryDatabase() {
         teamId: schema.teams.id,
       })
       .from(schema.teams)
-      .innerJoin(schema.organizations, sql`${schema.teams.clientId} = ${schema.organizations.id}`)
+      .innerJoin(schema.organizations, sql`${schema.teams.organizationId} = ${schema.organizations.id}`)
       .orderBy(schema.organizations.name, schema.teams.name);
     
     console.table(orgTeams);
@@ -65,7 +65,7 @@ async function queryDatabase() {
         latestDate: max(schema.dailyReports.reportDate),
       })
       .from(schema.dailyReports)
-      .innerJoin(schema.teams, sql`${schema.dailyReports.projectId} = ${schema.teams.id}`)
+      .innerJoin(schema.teams, sql`${schema.dailyReports.teamId} = ${schema.teams.id}`)
       .groupBy(schema.teams.name)
       .orderBy(schema.teams.name);
     
@@ -85,7 +85,7 @@ async function queryDatabase() {
         latestDate: max(schema.meetingTranscripts.transcriptDate),
       })
       .from(schema.meetingTranscripts)
-      .innerJoin(schema.teams, sql`${schema.meetingTranscripts.projectId} = ${schema.teams.id}`)
+      .innerJoin(schema.teams, sql`${schema.meetingTranscripts.teamId} = ${schema.teams.id}`)
       .groupBy(schema.teams.name)
       .orderBy(schema.teams.name);
     
@@ -105,7 +105,7 @@ async function queryDatabase() {
         byteSize: schema.jiraSnapshots.byteSize,
       })
       .from(schema.jiraSnapshots)
-      .innerJoin(schema.teams, sql`${schema.jiraSnapshots.projectId} = ${schema.teams.id}`)
+      .innerJoin(schema.teams, sql`${schema.jiraSnapshots.teamId} = ${schema.teams.id}`)
       .orderBy(schema.teams.name, sql`${schema.jiraSnapshots.collectedWeekStart} DESC`);
     
     if (jiraSnapshots.length > 0) {
@@ -124,7 +124,7 @@ async function queryDatabase() {
         byteSize: schema.slackCaptures.byteSize,
       })
       .from(schema.slackCaptures)
-      .innerJoin(schema.teams, sql`${schema.slackCaptures.projectId} = ${schema.teams.id}`)
+      .innerJoin(schema.teams, sql`${schema.slackCaptures.teamId} = ${schema.teams.id}`)
       .orderBy(schema.teams.name, sql`${schema.slackCaptures.collectedWeekStart} DESC`);
     
     if (slackCaptures.length > 0) {

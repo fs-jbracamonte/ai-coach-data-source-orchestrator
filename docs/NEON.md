@@ -124,6 +124,9 @@ npm run db:pull
 # Seed organizations, teams, report types
 npm run db:seed
 
+# Sync UUID cache from existing database
+npm run db:sync
+
 # Query database to verify data
 npm run db:query
 ```
@@ -341,6 +344,23 @@ NEON_ENV=prod npm run db:seed
 ```
 
 Each environment has its own UUID cache file.
+
+### Syncing Existing Environments
+
+If the database is already set up and you just need the UUID cache:
+
+```bash
+# Sync dev environment
+NEON_ENV=dev npm run db:sync
+
+# Sync staging environment
+NEON_ENV=staging npm run db:sync
+
+# Sync production environment
+NEON_ENV=prod npm run db:sync
+```
+
+This queries the database and generates the cache file without modifying any data.
 
 ## Troubleshooting
 

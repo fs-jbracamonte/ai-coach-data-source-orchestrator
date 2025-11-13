@@ -107,8 +107,8 @@ When `LOG_ERRORS=true` or `NODE_ENV=production`:
 ## Getting Help
 
 1. Read the error message and resolution steps
-2. Check `ERROR_HANDLING.md` for detailed explanations
-3. Review `CONFIG_VALIDATION.md` for config issues
+2. Check `docs/ERROR_HANDLING.md` for detailed explanations
+3. Review `docs/CONFIG_VALIDATION.md` for config issues
 4. Run with `DEBUG=true` for more details
 5. Check log files in `logs/` directory
 
@@ -174,6 +174,6 @@ esac
 
 ## See Also
 
-- **ERROR_HANDLING.md** - Complete error handling guide
-- **CONFIG_VALIDATION.md** - Configuration validation reference
-- **VALIDATION_QUICK_REFERENCE.md** - Config field quick reference
+- **docs/ERROR_HANDLING.md** - Complete error handling guide
+- **docs/CONFIG_VALIDATION.md** - Configuration validation reference
+- **docs/VALIDATION_QUICK_REFERENCE.md** - Config field quick reference

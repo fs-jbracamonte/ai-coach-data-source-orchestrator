@@ -112,7 +112,7 @@ npx cross-env CONFIG_FILE=config.rocks.json node -e "require('./lib/config').loa
 
 ## 📚 Full Documentation
 
-- `CONFIG_VALIDATION.md` - Complete validation guide with examples
+- `docs/CONFIG_VALIDATION.md` - Complete validation guide with examples
 - `config.example.jsonc` - Annotated configuration example
 - `schemas/config.schema.js` - Full Joi schema definition
 - `lib/validators.js` - Runtime validation functions

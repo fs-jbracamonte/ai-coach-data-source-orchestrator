@@ -138,7 +138,7 @@ async function seed() {
       for (const teamName of teamsList) {
         const [team] = await db.insert(schema.teams)
           .values({
-            clientId: orgId,
+            organizationId: orgId,
             name: teamName,
             description: `${teamName} project`,
           })

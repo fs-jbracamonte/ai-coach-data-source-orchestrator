@@ -8,7 +8,7 @@
 const { pgTable, uuid, text, timestamp, date, bigint, jsonb, index, uniqueIndex, check } = require('drizzle-orm/pg-core');
 const { relations, sql } = require('drizzle-orm');
 
-// Organizations table (clients)
+// Organizations table (organizations)
 const organizations = pgTable('organizations', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
@@ -17,10 +17,10 @@ const organizations = pgTable('organizations', {
   updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-// Teams table (projects within organizations)
+// Teams table (teams within organizations)
 const teams = pgTable('teams', {
   id: uuid('id').primaryKey().defaultRandom(),
-  clientId: uuid('client_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
+  organizationId: uuid('organization_id').notNull().references(() => organizations.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   description: text('description'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -30,7 +30,7 @@ const teams = pgTable('teams', {
 // Daily reports table (one row per employee per day)
 const dailyReports = pgTable('daily_reports', {
   id: uuid('id').primaryKey().defaultRandom(),
-  projectId: uuid('project_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   reportDate: date('report_date').notNull(),
   content: text('content').notNull(),
   blobKey: text('blob_key'),
@@ -40,15 +40,15 @@ const dailyReports = pgTable('daily_reports', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({
-  projectIdIdx: index('idx_daily_reports_project_id').on(table.projectId),
-  projectDateIdx: index('idx_daily_reports_project_date').on(table.projectId, table.reportDate),
-  uniqueDaily: uniqueIndex('uq_daily_project_author_date').on(table.projectId, table.authorName, table.reportDate),
+  teamIdIdx: index('idx_daily_reports_team_id').on(table.teamId),
+  teamDateIdx: index('idx_daily_reports_team_date').on(table.teamId, table.reportDate),
+  uniqueDaily: uniqueIndex('uq_daily_team_author_date').on(table.teamId, table.authorName, table.reportDate),
 }));
 
 // Meeting transcripts table (one row per transcript file)
 const meetingTranscripts = pgTable('meeting_transcripts', {
   id: uuid('id').primaryKey().defaultRandom(),
-  projectId: uuid('project_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   transcriptDate: timestamp('transcript_date').notNull(),
   filename: text('filename').notNull(),
   transcriptText: text('transcript_text').notNull(),
@@ -59,16 +59,16 @@ const meetingTranscripts = pgTable('meeting_transcripts', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({
-  projectIdIdx: index('idx_transcripts_project_id').on(table.projectId),
+  teamIdIdx: index('idx_transcripts_team_id').on(table.teamId),
   dateIdx: index('idx_transcripts_date').on(table.transcriptDate),
-  projectDateIdx: index('idx_transcripts_project_date').on(table.projectId, table.transcriptDate),
-  uniqueTranscript: uniqueIndex('uq_transcript_project_filename_date').on(table.projectId, table.filename, table.transcriptDate),
+  teamDateIdx: index('idx_transcripts_team_date').on(table.teamId, table.transcriptDate),
+  uniqueTranscript: uniqueIndex('uq_transcript_team_filename_date').on(table.teamId, table.filename, table.transcriptDate),
 }));
 
 // Jira snapshots table (weekly board snapshots)
 const jiraSnapshots = pgTable('jira_snapshots', {
   id: uuid('id').primaryKey().defaultRandom(),
-  projectId: uuid('project_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   collectedWeekStart: date('collected_week_start').notNull(),
   collectedWeekEnd: date('collected_week_end').notNull(),
   blobKey: text('blob_key').notNull(),
@@ -78,14 +78,14 @@ const jiraSnapshots = pgTable('jira_snapshots', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({
-  projectIdIdx: index('idx_jira_snapshots_project_id').on(table.projectId),
-  projectWeekIdx: index('idx_jira_snapshots_project_week').on(table.projectId, table.collectedWeekStart),
+  teamIdIdx: index('idx_jira_snapshots_team_id').on(table.teamId),
+  teamWeekIdx: index('idx_jira_snapshots_team_week').on(table.teamId, table.collectedWeekStart),
 }));
 
 // Slack captures table (weekly Slack data)
 const slackCaptures = pgTable('slack_captures', {
   id: uuid('id').primaryKey().defaultRandom(),
-  projectId: uuid('project_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   collectedWeekStart: date('collected_week_start').notNull(),
   collectedWeekEnd: date('collected_week_end').notNull(),
   blobKey: text('blob_key').notNull(),
@@ -95,9 +95,9 @@ const slackCaptures = pgTable('slack_captures', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => ({
-  projectIdIdx: index('idx_slack_captures_project_id').on(table.projectId),
+  teamIdIdx: index('idx_slack_captures_team_id').on(table.teamId),
   weekStartIdx: index('idx_slack_captures_week_start').on(table.collectedWeekStart),
-  projectWeekIdx: index('idx_slack_captures_project_week').on(table.projectId, table.collectedWeekStart),
+  teamWeekIdx: index('idx_slack_captures_team_week').on(table.teamId, table.collectedWeekStart),
 }));
 
 // Report types table (lookup)
@@ -113,7 +113,7 @@ const reportTypes = pgTable('report_types', {
 const generatedReports = pgTable('generated_reports', {
   id: uuid('id').primaryKey().defaultRandom(),
   reportTypeId: uuid('report_type_id').notNull().references(() => reportTypes.id, { onDelete: 'restrict' }),
-  projectId: uuid('project_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   triggeredBy: text('triggered_by'),
   generatedAt: timestamp('generated_at').notNull(),
   executionId: text('execution_id'),
@@ -125,9 +125,9 @@ const generatedReports = pgTable('generated_reports', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
-  projectTypeIdx: index('idx_generated_reports_project_type_date').on(table.projectId, table.reportTypeId, table.generatedAt),
+  teamTypeIdx: index('idx_generated_reports_team_type_date').on(table.teamId, table.reportTypeId, table.generatedAt),
   uniqueExecutionId: uniqueIndex('uq_execution_id').on(table.executionId),
-  uniqueProjectTypeHash: uniqueIndex('uq_proj_type_hash').on(table.projectId, table.reportTypeId, table.contentHash),
+  uniqueteamTypeHash: uniqueIndex('uq_proj_type_hash').on(table.teamId, table.reportTypeId, table.contentHash),
 }));
 
 // Report data links table (links generated reports to source data)
@@ -163,7 +163,7 @@ const organizationsRelations = relations(organizations, ({ many }) => ({
 
 const teamsRelations = relations(teams, ({ one, many }) => ({
   organization: one(organizations, {
-    fields: [teams.clientId],
+    fields: [teams.organizationId],
     references: [organizations.id],
   }),
   dailyReports: many(dailyReports),

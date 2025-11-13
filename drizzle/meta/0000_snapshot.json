@@ -1,5 +1,5 @@
 {
-  "id": "12478d50-1149-4a05-9afd-56b147403f88",
+  "id": "55d27d9a-6362-4671-9311-0997d684710c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -61,8 +61,8 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "client_id": {
-          "name": "client_id",
+        "organization_id": {
+          "name": "organization_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -96,12 +96,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "teams_client_id_organizations_id_fk": {
-          "name": "teams_client_id_organizations_id_fk",
+        "teams_organization_id_organizations_id_fk": {
+          "name": "teams_organization_id_organizations_id_fk",
           "tableFrom": "teams",
           "tableTo": "organizations",
           "columnsFrom": [
-            "client_id"
+            "organization_id"
           ],
           "columnsTo": [
             "id"
@@ -127,8 +127,8 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "project_id": {
-          "name": "project_id",
+        "team_id": {
+          "name": "team_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -185,11 +185,11 @@
         }
       },
       "indexes": {
-        "idx_daily_reports_project_id": {
-          "name": "idx_daily_reports_project_id",
+        "idx_daily_reports_team_id": {
+          "name": "idx_daily_reports_team_id",
           "columns": [
             {
-              "expression": "project_id",
+              "expression": "team_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -200,11 +200,11 @@
           "method": "btree",
           "with": {}
         },
-        "idx_daily_reports_project_date": {
-          "name": "idx_daily_reports_project_date",
+        "idx_daily_reports_team_date": {
+          "name": "idx_daily_reports_team_date",
           "columns": [
             {
-              "expression": "project_id",
+              "expression": "team_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -221,11 +221,11 @@
           "method": "btree",
           "with": {}
         },
-        "uq_daily_project_author_date": {
-          "name": "uq_daily_project_author_date",
+        "uq_daily_team_author_date": {
+          "name": "uq_daily_team_author_date",
           "columns": [
             {
-              "expression": "project_id",
+              "expression": "team_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -250,12 +250,12 @@
         }
       },
       "foreignKeys": {
-        "daily_reports_project_id_teams_id_fk": {
-          "name": "daily_reports_project_id_teams_id_fk",
+        "daily_reports_team_id_teams_id_fk": {
+          "name": "daily_reports_team_id_teams_id_fk",
           "tableFrom": "daily_reports",
           "tableTo": "teams",
           "columnsFrom": [
-            "project_id"
+            "team_id"
           ],
           "columnsTo": [
             "id"
@@ -281,8 +281,8 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "project_id": {
-          "name": "project_id",
+        "team_id": {
+          "name": "team_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -345,11 +345,11 @@
         }
       },
       "indexes": {
-        "idx_transcripts_project_id": {
-          "name": "idx_transcripts_project_id",
+        "idx_transcripts_team_id": {
+          "name": "idx_transcripts_team_id",
           "columns": [
             {
-              "expression": "project_id",
+              "expression": "team_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -375,11 +375,11 @@
           "method": "btree",
           "with": {}
         },
-        "idx_transcripts_project_date": {
-          "name": "idx_transcripts_project_date",
+        "idx_transcripts_team_date": {
+          "name": "idx_transcripts_team_date",
           "columns": [
             {
-              "expression": "project_id",
+              "expression": "team_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -396,11 +396,11 @@
           "method": "btree",
           "with": {}
         },
-        "uq_transcript_project_filename_date": {
-          "name": "uq_transcript_project_filename_date",
+        "uq_transcript_team_filename_date": {
+          "name": "uq_transcript_team_filename_date",
           "columns": [
             {
-              "expression": "project_id",
+              "expression": "team_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -425,12 +425,12 @@
         }
       },
       "foreignKeys": {
-        "meeting_transcripts_project_id_teams_id_fk": {
-          "name": "meeting_transcripts_project_id_teams_id_fk",
+        "meeting_transcripts_team_id_teams_id_fk": {
+          "name": "meeting_transcripts_team_id_teams_id_fk",
           "tableFrom": "meeting_transcripts",
           "tableTo": "teams",
           "columnsFrom": [
-            "project_id"
+            "team_id"
           ],
           "columnsTo": [
             "id"
@@ -456,8 +456,8 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "project_id": {
-          "name": "project_id",
+        "team_id": {
+          "name": "team_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -514,11 +514,11 @@
         }
       },
       "indexes": {
-        "idx_jira_snapshots_project_id": {
-          "name": "idx_jira_snapshots_project_id",
+        "idx_jira_snapshots_team_id": {
+          "name": "idx_jira_snapshots_team_id",
           "columns": [
             {
-              "expression": "project_id",
+              "expression": "team_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -529,11 +529,11 @@
           "method": "btree",
           "with": {}
         },
-        "idx_jira_snapshots_project_week": {
-          "name": "idx_jira_snapshots_project_week",
+        "idx_jira_snapshots_team_week": {
+          "name": "idx_jira_snapshots_team_week",
           "columns": [
             {
-              "expression": "project_id",
+              "expression": "team_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -552,12 +552,12 @@
         }
       },
       "foreignKeys": {
-        "jira_snapshots_project_id_teams_id_fk": {
-          "name": "jira_snapshots_project_id_teams_id_fk",
+        "jira_snapshots_team_id_teams_id_fk": {
+          "name": "jira_snapshots_team_id_teams_id_fk",
           "tableFrom": "jira_snapshots",
           "tableTo": "teams",
           "columnsFrom": [
-            "project_id"
+            "team_id"
           ],
           "columnsTo": [
             "id"
@@ -583,8 +583,8 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "project_id": {
-          "name": "project_id",
+        "team_id": {
+          "name": "team_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -641,11 +641,11 @@
         }
       },
       "indexes": {
-        "idx_slack_captures_project_id": {
-          "name": "idx_slack_captures_project_id",
+        "idx_slack_captures_team_id": {
+          "name": "idx_slack_captures_team_id",
           "columns": [
             {
-              "expression": "project_id",
+              "expression": "team_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -671,11 +671,11 @@
           "method": "btree",
           "with": {}
         },
-        "idx_slack_captures_project_week": {
-          "name": "idx_slack_captures_project_week",
+        "idx_slack_captures_team_week": {
+          "name": "idx_slack_captures_team_week",
           "columns": [
             {
-              "expression": "project_id",
+              "expression": "team_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -694,12 +694,12 @@
         }
       },
       "foreignKeys": {
-        "slack_captures_project_id_teams_id_fk": {
-          "name": "slack_captures_project_id_teams_id_fk",
+        "slack_captures_team_id_teams_id_fk": {
+          "name": "slack_captures_team_id_teams_id_fk",
           "tableFrom": "slack_captures",
           "tableTo": "teams",
           "columnsFrom": [
-            "project_id"
+            "team_id"
           ],
           "columnsTo": [
             "id"
@@ -785,8 +785,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "project_id": {
-          "name": "project_id",
+        "team_id": {
+          "name": "team_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -855,11 +855,11 @@
         }
       },
       "indexes": {
-        "idx_generated_reports_project_type_date": {
-          "name": "idx_generated_reports_project_type_date",
+        "idx_generated_reports_team_type_date": {
+          "name": "idx_generated_reports_team_type_date",
           "columns": [
             {
-              "expression": "project_id",
+              "expression": "team_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -901,7 +901,7 @@
           "name": "uq_proj_type_hash",
           "columns": [
             {
-              "expression": "project_id",
+              "expression": "team_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -939,12 +939,12 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
-        "generated_reports_project_id_teams_id_fk": {
-          "name": "generated_reports_project_id_teams_id_fk",
+        "generated_reports_team_id_teams_id_fk": {
+          "name": "generated_reports_team_id_teams_id_fk",
           "tableFrom": "generated_reports",
           "tableTo": "teams",
           "columnsFrom": [
-            "project_id"
+            "team_id"
           ],
           "columnsTo": [
             "id"

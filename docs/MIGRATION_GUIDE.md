@@ -84,5 +84,5 @@ A: The 1on1 override can narrow to a single member. Use base config with `genera
 
 ## Validation
 
-See `CONFIG_VALIDATION.md` for report-type validation rules and common errors.
+See `docs/CONFIG_VALIDATION.md` for report-type validation rules and common errors.
 

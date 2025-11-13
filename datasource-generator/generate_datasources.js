@@ -443,7 +443,11 @@ class DatasourceGenerator {
 
       // Step 3: Extract Jira data and upload to Vercel Blob
       console.log('\n=== Upload to Vercel Blob (if enabled) ===');
-      await this.uploadToVercelBlob(generatedFiles);
+      const vercelResults = await this.uploadToVercelBlob(generatedFiles);
+
+      // Step 4: Store to Neon Database (if enabled)
+      console.log('\n=== Store to Neon Database (if enabled) ===');
+      await this.storeToNeonDB(generatedFiles, vercelResults);
       
     } catch (error) {
       handleError(error, {
@@ -473,11 +477,13 @@ class DatasourceGenerator {
         '1on1'
       );
       
+      let results = null;
+      
       // Upload all data (for 1on1, we upload each extracted Jira file separately)
       // We'll upload transcripts and daily reports once, then each Jira data file
       if (extractedFiles.length > 0) {
         // Upload transcripts and daily reports (shared across all members)
-        await uploadAllData({
+        results = await uploadAllData({
           projectFolder,
           config,
           transcriptsDir: this.transcriptsDir,
@@ -493,7 +499,7 @@ class DatasourceGenerator {
         }
       } else {
         // Just upload transcripts and daily reports
-        await uploadAllData({
+        results = await uploadAllData({
           projectFolder,
           config,
           transcriptsDir: this.transcriptsDir,
@@ -502,9 +508,48 @@ class DatasourceGenerator {
           jiraDataFile: null
         });
       }
+      
+      return results;
     } catch (error) {
       console.warn('⚠ Vercel Blob upload failed (non-fatal):', error.message);
       console.warn('Continuing without upload...');
+      return null;
+    }
+  }
+
+  /**
+   * Store data to Neon Database
+   */
+  async storeToNeonDB(generatedFiles, vercelResults) {
+    try {
+      const { storeAllData } = require('../lib/neon-db-storage');
+      const { extractFromDirectory } = require('../lib/jira-data-extractor');
+      const { getProjectFolder } = require('../lib/project-folder');
+      
+      const projectFolder = getProjectFolder(process.env.TEAM, config);
+      
+      // Extract Jira data from all datasource.py files
+      const extractedFiles = extractFromDirectory(
+        this.outputDir,
+        this.jiraDir,
+        config,
+        '1on1'
+      );
+      
+      // For 1on1, store the shared data (transcripts and daily reports)
+      // Jira snapshots are per-member so we can skip them for now
+      await storeAllData({
+        projectFolder,
+        config,
+        transcriptsDir: this.transcriptsDir,
+        dailyReportsDir: this.dailyReportsDir,
+        slackDir: null, // 1on1 typically doesn't include Slack
+        jiraDataFile: null, // Skip per-member Jira files for now
+        vercelResults
+      });
+    } catch (error) {
+      console.warn('⚠ Neon DB storage failed (non-fatal):', error.message);
+      console.warn('Continuing without database storage...');
     }
   }
 }

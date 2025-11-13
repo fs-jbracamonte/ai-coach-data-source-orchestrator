@@ -286,7 +286,7 @@ npm run transcripts:download
 
 ## Related Documentation
 
-- [Configuration System](../CONFIG_VALIDATION.md) - How projects are configured
+- [Configuration System](CONFIG_VALIDATION.md) - How projects are configured
 - [AI Agent Instructions](../.github/copilot-instructions.md) - Architecture overview
 - [README](../README.md) - Main documentation
 

@@ -252,7 +252,7 @@ This tests:
 
 ## See Also
 
-- `config.example.jsonc` - Complete configuration example with comments
-- `schemas/config.schema.js` - Full Joi validation schema
-- `lib/validators.js` - Runtime validation functions
-- `lib/config.js` - Configuration loading and validation
+- `../config.example.jsonc` - Complete configuration example with comments
+- `../schemas/config.schema.js` - Full Joi validation schema
+- `../lib/validators.js` - Runtime validation functions
+- `../lib/config.js` - Configuration loading and validation

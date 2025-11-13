@@ -339,8 +339,8 @@ try {
 
 ## See Also
 
-- `CONFIG_VALIDATION.md` - Configuration validation system
-- `VALIDATION_QUICK_REFERENCE.md` - Quick reference for config validation
+- `docs/CONFIG_VALIDATION.md` - Configuration validation system
+- `docs/VALIDATION_QUICK_REFERENCE.md` - Quick reference for config validation
 - `.github/copilot-instructions.md` - Complete architecture documentation
 - `lib/errors.js` - Error class definitions
 - `lib/error-handler.js` - Error handling implementation

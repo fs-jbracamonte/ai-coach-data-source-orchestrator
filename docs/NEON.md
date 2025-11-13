@@ -1,276 +1,445 @@
-# Neon PostgreSQL Database Integration
+# Neon Database Integration with Drizzle ORM
 
 ## Overview
 
-The Neon PostgreSQL database integration stores generated data sources with metadata, checksums, and Vercel Blob references for structured querying and analysis.
+The Data Source Orchestrator integrates with Neon PostgreSQL database using **Drizzle ORM** for type-safe, production-ready database operations.
 
-## Features
+### Key Features
 
-✅ **Hidden Behind Feature Flag** - Won't run unless `ENABLE_NEON_DB_STORAGE=true`  
-✅ **Production-Ready** - Uses `@neondatabase/serverless` (works anywhere Node.js runs)  
-✅ **Automatic Deduplication** - Re-running with same data updates existing records  
-✅ **File Integrity** - SHA-256 checksums verify uploaded files  
-✅ **Non-Fatal Errors** - Database failures won't break datasource generation  
-✅ **Multi-Environment** - Different UUID caches for dev/staging/prod  
+✅ **Type-Safe Queries** - Full TypeScript support with autocomplete  
+✅ **Automatic Migrations** - Schema-driven migrations with Drizzle Kit  
+✅ **Built-in Seeding** - Automated seeding with UUID caching  
+✅ **Production-Ready** - Works in any Node.js environment  
+✅ **Multi-Environment** - Supports dev/staging/prod  
+✅ **Feature-Flag Controlled** - Hidden behind `ENABLE_NEON_DB_STORAGE`  
+
+## Architecture
+
+### Technology Stack
+
+- **Drizzle ORM** - Type-safe query builder and ORM
+- **Drizzle Kit** - CLI tools for migrations and schema management
+- **@neondatabase/serverless** - Neon's HTTP-based PostgreSQL driver
+- **drizzle-orm/neon-http** - Drizzle adapter for Neon
+
+### Database Schema
+
+Defined in `db/schema.ts`:
+
+1. **organizations** - Client organizations (Full Scale, Full Scale Ventures)
+2. **teams** - Projects within organizations
+3. **daily_reports** - Daily report entries (one per employee per day)
+4. **meeting_transcripts** - Meeting transcript files
+5. **jira_snapshots** - Weekly Jira data (blob references)
+6. **slack_captures** - Weekly Slack data (blob references)
+7. **report_types** - Report type lookup (1on1, dashboard, weekly-digest)
+8. **generated_reports** - Datasource.py metadata (future use)
+9. **report_data_links** - Links reports to source data (future use)
 
 ## Quick Start
 
-### Step 1: Run Database Setup
-
-1. **Run migrations** (one-time setup):
-   - Execute SQL from `migrations/001_initial_schema.sql` in Neon Console
-   - Execute SQL from `migrations/002_updated_at_triggers.sql` in Neon Console
-
-2. **Seed the database**:
-   ```bash
-   node scripts/seed-neon-db.js
-   ```
-   - Generates SQL for organizations, teams, and report types
-   - Execute the generated SQL in Neon Console
-   - Manually create UUID cache file (`.neon-db-ids.dev.json`) with returned UUIDs
-
-### Step 2: Configure Environment
-
-Add to your `.env` file:
+### 1. Install Dependencies
 
 ```bash
-# Vercel Blob (required for Neon - stores blob references)
-ENABLE_VERCEL_BLOB_UPLOAD=true
-BLOB_READ_WRITE_TOKEN=your_vercel_token_here
+npm install
+```
 
-# Neon Database Storage
+This installs:
+- `drizzle-orm` - ORM runtime
+- `drizzle-kit` - Migration tools (dev dependency)
+- `drizzle-seed` - Seeding library
+
+### 2. Configure Environment
+
+Add to `.env`:
+
+```bash
+# Neon Database
 ENABLE_NEON_DB_STORAGE=true
 DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
-NEON_ENV=dev  # or staging, prod
+NEON_ENV=dev
+
+# Vercel Blob (required for Neon)
+ENABLE_VERCEL_BLOB_UPLOAD=true
+BLOB_READ_WRITE_TOKEN=your_token_here
 ```
 
-**Important**: Replace placeholders with your actual credentials from Neon Console.
+### 3. Push Schema to Database
 
-### Step 3: Test It!
-
-Run any datasource generator:
+For a **fresh database** (recommended):
 
 ```bash
-# Test with any generator
-npm run aicoach:weekly
-npm run engagepath:weekly
-npm run rocks:weekly
+npm run db:push
 ```
 
-**What happens:**
-1. ✅ Generates datasource.py as normal
-2. ✅ Uploads to Vercel Blob (with checksums)
-3. ✅ **Automatically stores to Neon database**
-4. ✅ Console shows: "Successfully stored X records to Neon database"
+This:
+- Reads the TypeScript schema from `db/schema.ts`
+- Creates all tables, indexes, and constraints
+- No migration files generated (faster for initial setup)
 
-## Database Schema
+### 4. Seed the Database
 
-Your database has these tables:
+```bash
+npm run db:seed
+```
 
-1. **organizations** - Full Scale, Full Scale Ventures
-2. **teams** - rocks, timeclock, ai-coach, engagepath
-3. **daily_reports** - Daily report entries (one per employee per day)
-   - Deduplication: `(project_id, author_name, report_date)` unique
-   - Contains markdown content inline + optional blob reference
-4. **meeting_transcripts** - Transcript files (one per meeting)
-   - Deduplication: `(project_id, filename, transcript_date)` unique
-   - Contains full transcript text inline + blob reference
-5. **jira_snapshots** - Weekly Jira data (blob references only)
-   - No deduplication (time-based snapshots)
-6. **slack_captures** - Weekly Slack data (blob references only)
-   - No deduplication
-7. **report_types** - 1on1, dashboard, weekly-digest
-8. **generated_reports** - Future use
-9. **report_data_links** - Future use
+This:
+- Inserts organizations (Full Scale, Full Scale Ventures)
+- Inserts teams (rocks, timeclock, engagepath, ai-coach)
+- Inserts report types (1on1, dashboard, weekly-digest)
+- Automatically creates `.neon-db-ids.dev.json` with UUIDs
 
-## What Gets Stored
+### 5. Verify Setup
+
+```bash
+npm run db:query
+```
+
+Shows:
+- Organizations and teams
+- Report types
+- Data counts (daily reports, transcripts, etc.)
+
+## Commands Reference
+
+### Schema Management
+
+```bash
+# Push schema to database (no migration files)
+npm run db:push
+
+# Generate migration files from schema changes
+npm run db:generate
+
+# Apply generated migrations programmatically
+npm run db:migrate
+
+# Pull existing schema from database
+npm run db:pull
+```
+
+### Data Management
+
+```bash
+# Seed organizations, teams, report types
+npm run db:seed
+
+# Query database to verify data
+npm run db:query
+```
+
+### Development Tools
+
+```bash
+# Open Drizzle Studio (GUI for browsing data)
+npm run db:studio
+```
+
+## Drizzle Studio
+
+Drizzle Studio is a web-based GUI for viewing and editing your database:
+
+```bash
+npm run db:studio
+```
+
+Opens at http://localhost:4983 with:
+- Visual table browser
+- Query editor
+- Data editing capabilities
+- Useful for debugging and verification
+
+## Migration Workflow
+
+### Initial Setup (Fresh Database)
+
+Use `db:push` for the fastest setup:
+
+```bash
+npm run db:push     # Creates all tables
+npm run db:seed     # Seeds initial data
+```
+
+### Schema Changes (After Initial Setup)
+
+For tracked migrations:
+
+```bash
+# 1. Update db/schema.js with your changes
+# 2. Generate migration files
+npm run db:generate
+
+# 3. Apply migrations
+npm run db:migrate
+```
+
+## Adding New Tables or Columns
+
+### Step-by-Step Workflow
+
+**1. Update the Schema**
+
+Edit `db/schema.js` and add your new table:
+
+```javascript
+// Example: Add a new "projects" table
+const projects = pgTable('projects', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  status: text('status').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow().$onUpdate(() => new Date()),
+}, (table) => ({
+  teamIdIdx: index('idx_projects_team_id').on(table.teamId),
+}));
+
+// Don't forget to export it!
+module.exports = {
+  organizations,
+  teams,
+  dailyReports,
+  // ... existing exports ...
+  projects,  // ← Add new table to exports
+};
+```
+
+**2. Generate Migration**
+
+```bash
+npm run db:generate
+```
+
+This creates a new migration file: `drizzle/0001_some_name.sql`
+
+**3. Review the Migration**
+
+Check the generated SQL in `drizzle/0001_*.sql` to ensure it's correct.
+
+**4. Apply Migration**
+
+**Development:**
+```bash
+npm run db:push  # Direct sync (faster)
+```
+
+**Production:**
+```bash
+npm run db:migrate  # Apply tracked migrations
+```
+
+**5. Verify**
+
+```bash
+npm run db:query
+# Or visually:
+npm run db:studio
+```
+
+### Modifying Existing Tables
+
+Same workflow - just edit the table definition in `db/schema.js`:
+
+```javascript
+// Add a new column to existing table
+const teams = pgTable('teams', {
+  // ... existing columns ...
+  isActive: boolean('is_active').notNull().default(true),  // ← New column
+});
+```
+
+Then run `npm run db:generate` to create the ALTER TABLE migration.
+
+### Migration vs Push
+
+- **`db:push`** - Direct sync, no migration files, fast iteration (best for development)
+- **`db:generate` + `db:migrate`** - Creates migration files, version controlled (best for production)
+
+**For production workflow:**
+1. Generate migrations locally: `npm run db:generate`
+2. Commit migration files to git: `drizzle/0001_*.sql`
+3. Apply in production: `npm run db:migrate`
+
+### No Automatic Rollbacks
+
+⚠️ **Important**: Drizzle does not have automatic "down" migrations.
+
+**Rollback strategies:**
+
+1. **Manual Reverse Migrations**
+   - Create new migration that reverses the change
+   - Example: Added column? Create migration to drop it
+
+2. **Neon Branching**
+   - Test schema changes on a Neon branch first
+   - Only apply to main if tests pass
+
+3. **Neon Point-in-Time Recovery**
+   - Restore database to specific timestamp
+   - Use for critical failures
+
+## How Data is Stored
+
+### Storage Flow
+
+1. **Generate datasource.py** (normal workflow)
+2. **Upload to Vercel Blob** (with SHA-256 checksums)
+3. **Store to Neon** (if enabled):
+   - Parse markdown files
+   - Extract metadata (dates, authors, filenames)
+   - Match blob references from Vercel results
+   - Execute Drizzle insert/update queries
+   - Report counts to console
 
 ### Daily Reports
-- Split by date (one row per employee per day)
-- Markdown content stored inline
-- Blob references from Vercel upload
-- SHA-256 checksums
+
+- Split by `## Date` headers
+- One row per employee per day
+- Extract author from `**Employee**: Name`
+- Store markdown content inline + blob reference
+- Deduplication: `(project_id, author_name, report_date)`
 
 ### Meeting Transcripts
+
 - One row per transcript file
-- Full transcript text stored inline
-- Blob references from Vercel upload
-- Date parsed from filename
+- Parse date from filename
+- Store full text inline + blob reference
+- Deduplication: `(project_id, filename, transcript_date)`
 
 ### Jira Snapshots
-- One row per week (blob reference only)
-- Week start/end dates from config
-- Points to epic_tree markdown in Vercel Blob
+
+- One row per week
+- Blob reference only (points to epic_tree markdown)
+- Uses config date range for week start/end
+- No deduplication
 
 ### Slack Captures
-- One row per channel per week (blob reference only)
-- Week start/end dates from config
-- Points to sanitized Slack markdown in Vercel Blob
 
-## Console Output Example
-
-When Neon storage is enabled:
-
-```
-=== Storing Data to Neon Database ===
-
-Project: ai-coach
-Environment: dev
-Project UUID: 2b7e52de-37e6-4d6d-b72f-15a8bf855bc5
-
-Processing daily reports...
-  ✓ daily-reports-John-Doe-2025-10-27-to-2025-11-02.md: 5 daily sections
-  ✓ daily-reports-Jane-Smith-2025-10-27-to-2025-11-02.md: 5 daily sections
-
-Processing transcripts...
-  ✓ fathom-transcripts-2025-10-27T14:30:00.md
-  ✓ fathom-transcripts-2025-10-28T10:15:00.md
-
-Processing Jira snapshot...
-  ✓ jira_data_weekly_2025-10-27_to_2025-11-02.md
-
-Processing Slack captures...
-  ✓ 2 Slack files
-
-=== Neon Database Storage Summary ===
-Daily Reports: 10 inserted from 2 files
-Transcripts: 2 inserted from 2 files
-Jira Snapshots: 1 inserted from 1 files
-Slack Captures: 2 inserted from 2 files
-
-✓ Successfully stored 15 records to Neon database
-```
-
-## Verifying Data
-
-Query your database using Neon Console SQL Editor:
-
-```sql
--- Check daily reports
-SELECT report_date, author_name, LEFT(content, 50) as preview 
-FROM daily_reports 
-ORDER BY report_date DESC 
-LIMIT 10;
-
--- Check transcripts
-SELECT transcript_date, filename, byte_size 
-FROM meeting_transcripts 
-ORDER BY transcript_date DESC 
-LIMIT 10;
-
--- Check Jira snapshots
-SELECT collected_week_start, collected_week_end, blob_key 
-FROM jira_snapshots 
-ORDER BY collected_week_start DESC;
-
--- Check Slack captures
-SELECT collected_week_start, collected_week_end, blob_key 
-FROM slack_captures 
-ORDER BY collected_week_start DESC;
-```
+- One row per channel per week
+- Blob reference only (points to sanitized markdown)
+- Uses config date range for week start/end
+- No deduplication
 
 ## Multi-Environment Support
 
-The implementation supports multiple Neon instances:
-
-1. Set different `NEON_ENV` values (dev, staging, prod)
-2. Each environment uses its own UUID cache: `.neon-db-ids.{NEON_ENV}.json`
-3. Migrations are portable (pure SQL)
-4. Seed script is idempotent
-
-Example for production:
+Use different `NEON_ENV` values for different Neon instances:
 
 ```bash
-# Production environment
-NEON_ENV=prod node scripts/seed-neon-db.js
+# Development
+NEON_ENV=dev npm run db:seed
+# Creates .neon-db-ids.dev.json
 
+# Staging
+NEON_ENV=staging npm run db:push
+NEON_ENV=staging npm run db:seed
+# Creates .neon-db-ids.staging.json
+
+# Production
+NEON_ENV=prod npm run db:push
+NEON_ENV=prod npm run db:seed
 # Creates .neon-db-ids.prod.json
-# Run generators with NEON_ENV=prod
 ```
+
+Each environment has its own UUID cache file.
 
 ## Troubleshooting
 
-### Storage is Disabled
+### "DATABASE_URL not configured"
 
-**Symptom**: Console shows "Storage disabled"
+**Solution**: Add `DATABASE_URL` to `.env`:
+```bash
+DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
+```
 
-**Solution**: 
-- Check: `ENABLE_NEON_DB_STORAGE=true` in `.env`
-- Check: `ENABLE_VERCEL_BLOB_UPLOAD=true` in `.env` (required!)
+Get from: Neon Console → Project → Connection Details
 
-### Database Connection Errors
+### "Vercel Blob upload is not enabled"
 
-**Symptom**: Console shows "DATABASE_URL not configured" or connection failures
+**Solution**: Neon storage requires Vercel upload (stores blob references):
+```bash
+ENABLE_VERCEL_BLOB_UPLOAD=true
+BLOB_READ_WRITE_TOKEN=your_token
+```
 
-**Solution**:
-- Check: `DATABASE_URL=postgresql://...` in `.env`
-- Verify connection string format includes `?sslmode=require`
-- Test connection using Neon Console
+### "Could not find project UUID"
 
-### Could Not Find Project UUID
+**Solution**: Run the seed script:
+```bash
+npm run db:seed
+```
 
-**Symptom**: Console shows "Could not find project UUID for {projectFolder}"
+Verify `.neon-db-ids.dev.json` exists and contains team UUIDs.
 
-**Solution**:
-- Check: `.neon-db-ids.{NEON_ENV}.json` exists
-- Verify team name matches projectFolder (e.g., "ai-coach" not "aicoach")
-- Re-run seed script if UUIDs are missing
+### Migration Errors
 
-### Insert Failures
+**For fresh database**: Use `npm run db:push` instead of `db:migrate`
 
-**Symptom**: Console shows failed insertions
+**For schema conflicts**: 
+1. Pull current schema: `npm run db:pull`
+2. Review conflicts
+3. Update `db/schema.ts`
+4. Push again: `npm run db:push`
 
-**Solution**:
-- Enable debug mode: `DEBUG=true npm run aicoach:weekly`
-- Check Neon Console → Monitoring for connection issues
-- Verify UUID cache file contains correct UUIDs
-- Verify migrations were executed successfully
+### Connection Errors
 
-## Implementation Details
+1. Verify `DATABASE_URL` format
+2. Check Neon Console → Monitoring
+3. Test connection: `npm run db:query`
+4. Enable debug: `DEBUG=true npm run db:query`
 
-### Automatic SQL Execution
+## File Structure
 
-The implementation uses `@neondatabase/serverless` package to automatically execute SQL statements. This means:
-- No manual SQL execution required
-- Works in any Node.js environment (local, Vercel, AWS Lambda, etc.)
-- No dependency on Cursor or MCP services
+```
+data-source-orchestrator/
+├── db/
+│   ├── schema.ts              # Drizzle schema definition
+│   └── client.ts              # Drizzle client configuration
+├── drizzle/                   # Generated migrations (if using generate)
+│   ├── meta/                  # Migration metadata
+│   └── *.sql                  # Migration SQL files
+├── migrations/                # Legacy SQL migrations (kept for reference)
+│   ├── 001_initial_schema.sql
+│   └── 002_updated_at_triggers.sql
+├── scripts/
+│   ├── run-neon-migrations.js # Migration runner (Drizzle)
+│   ├── seed-neon-db.js        # Seeder (Drizzle)
+│   └── query-neon-db.js       # Query helper (Drizzle)
+├── lib/
+│   └── neon-db-storage.js     # Storage module (Drizzle)
+├── drizzle.config.ts          # Drizzle Kit configuration
+└── .neon-db-ids.{env}.json    # UUID cache (environment-specific)
+```
 
-### Data Flow
+## Best Practices
 
-1. Generate datasource.py (normal workflow)
-2. Upload to Vercel Blob (if enabled) - computes checksums
-3. Store in Neon DB (if enabled and DATABASE_URL configured):
-   - Parse markdown outputs to extract metadata
-   - Split daily reports by date sections
-   - Extract author names, dates, filenames
-   - Match blob references from Vercel upload results
-   - Execute SQL INSERT statements with ON CONFLICT handling
-   - Report success/failure counts to console
+1. **Test on branches first** - Use Neon branching for testing schema changes
+2. **Use db:push for fresh setups** - Faster than migrations
+3. **Use db:generate for tracked changes** - After initial setup
+4. **Keep UUID cache in version control** - But gitignore it (contains IDs)
+5. **Monitor console output** - Check insertion counts after generators run
+6. **Use Drizzle Studio** - Visual debugging of database contents
 
-### Deduplication
+## Type Safety Benefits
 
-- Daily reports use `(project_id, author_name, report_date)` as natural key
-- Transcripts use `(project_id, filename, transcript_date)` as natural key
-- ON CONFLICT clauses automatically update existing records
-- Jira and Slack snapshots allow duplicates (time-based data)
+With Drizzle ORM, all database operations are type-safe:
 
-### Checksum Usage
+```javascript
+// Auto-completion and type checking
+const reports = await db
+  .select()
+  .from(schema.dailyReports)
+  .where(eq(schema.dailyReports.projectId, projectUUID));
 
-- SHA-256 checksums computed during Vercel upload
-- Stored for file integrity verification
-- NOT used for deduplication (natural keys used instead)
-- Useful for verifying uploaded blob content matches source files
+// TypeScript knows the shape of 'reports'
+// reports[0].reportDate // ✓ Type: Date
+// reports[0].content    // ✓ Type: string
+```
 
-## Local Files
+No more SQL injection vulnerabilities or typos in column names!
 
-**Important**: Local markdown files are always preserved. Neon stores metadata and references, not replacements.
+## Additional Resources
 
-## Support
-
-For issues or questions:
-1. Check console output for detailed error messages
-2. Review this documentation
-3. Check `.github/copilot-instructions.md` for architectural details
-4. Verify environment variables are set correctly
-5. Enable debug mode for detailed logging
-
+- **Drizzle ORM Docs**: https://orm.drizzle.team
+- **Neon Docs**: https://neon.tech/docs
+- **Schema Definition**: `db/schema.ts`
+- **Configuration**: `drizzle.config.ts`

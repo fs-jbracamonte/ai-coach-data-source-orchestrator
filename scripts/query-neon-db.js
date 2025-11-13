@@ -1,13 +1,18 @@
 require('dotenv').config();
 const { neon } = require('@neondatabase/serverless');
+const { drizzle } = require('drizzle-orm/neon-http');
+const { sql, count, min, max } = require('drizzle-orm');
+const schema = require('../db/schema');
 
 /**
- * Simple Neon Database Query Helper
+ * Neon Database Query Helper (Drizzle ORM)
  * 
  * Quick utility to query your Neon database and verify data.
+ * Uses Drizzle ORM for type-safe queries.
  * 
  * Usage:
  *   node scripts/query-neon-db.js
+ *   npm run db:query
  */
 
 async function queryDatabase() {
@@ -21,38 +26,49 @@ async function queryDatabase() {
   console.log('\n=== Querying Neon Database ===\n');
   
   try {
-    const sql = neon(databaseUrl);
+    const sqlClient = neon(databaseUrl);
+    const db = drizzle(sqlClient, { schema });
     
     // Query organizations and teams
     console.log('Organizations and Teams:');
-    const orgTeams = await sql`
-      SELECT o.name as organization, t.name as team, t.id as team_id
-      FROM teams t 
-      JOIN organizations o ON t.client_id = o.id 
-      ORDER BY o.name, t.name
-    `;
+    const orgTeams = await db
+      .select({
+        organization: schema.organizations.name,
+        team: schema.teams.name,
+        teamId: schema.teams.id,
+      })
+      .from(schema.teams)
+      .innerJoin(schema.organizations, sql`${schema.teams.clientId} = ${schema.organizations.id}`)
+      .orderBy(schema.organizations.name, schema.teams.name);
+    
     console.table(orgTeams);
     
     // Query report types
     console.log('\nReport Types:');
-    const reportTypes = await sql`
-      SELECT name, description FROM report_types ORDER BY name
-    `;
+    const reportTypes = await db
+      .select({
+        name: schema.reportTypes.name,
+        description: schema.reportTypes.description,
+      })
+      .from(schema.reportTypes)
+      .orderBy(schema.reportTypes.name);
+    
     console.table(reportTypes);
     
     // Query daily reports count
     console.log('\nDaily Reports:');
-    const dailyReports = await sql`
-      SELECT 
-        t.name as team,
-        COUNT(*) as report_count,
-        MIN(report_date) as earliest_date,
-        MAX(report_date) as latest_date
-      FROM daily_reports dr
-      JOIN teams t ON dr.project_id = t.id
-      GROUP BY t.name
-      ORDER BY t.name
-    `;
+    const dailyReports = await db
+      .select({
+        team: schema.teams.name,
+        reportCount: count(),
+        earliestDate: min(schema.dailyReports.reportDate),
+        latestDate: max(schema.dailyReports.reportDate),
+      })
+      .from(schema.dailyReports)
+      .innerJoin(schema.teams, sql`${schema.dailyReports.projectId} = ${schema.teams.id}`)
+      .groupBy(schema.teams.name)
+      .orderBy(schema.teams.name);
+    
     if (dailyReports.length > 0) {
       console.table(dailyReports);
     } else {
@@ -61,17 +77,18 @@ async function queryDatabase() {
     
     // Query transcripts count
     console.log('\nMeeting Transcripts:');
-    const transcripts = await sql`
-      SELECT 
-        t.name as team,
-        COUNT(*) as transcript_count,
-        MIN(transcript_date) as earliest_date,
-        MAX(transcript_date) as latest_date
-      FROM meeting_transcripts mt
-      JOIN teams t ON mt.project_id = t.id
-      GROUP BY t.name
-      ORDER BY t.name
-    `;
+    const transcripts = await db
+      .select({
+        team: schema.teams.name,
+        transcriptCount: count(),
+        earliestDate: min(schema.meetingTranscripts.transcriptDate),
+        latestDate: max(schema.meetingTranscripts.transcriptDate),
+      })
+      .from(schema.meetingTranscripts)
+      .innerJoin(schema.teams, sql`${schema.meetingTranscripts.projectId} = ${schema.teams.id}`)
+      .groupBy(schema.teams.name)
+      .orderBy(schema.teams.name);
+    
     if (transcripts.length > 0) {
       console.table(transcripts);
     } else {
@@ -80,16 +97,17 @@ async function queryDatabase() {
     
     // Query Jira snapshots
     console.log('\nJira Snapshots:');
-    const jiraSnapshots = await sql`
-      SELECT 
-        t.name as team,
-        collected_week_start,
-        collected_week_end,
-        byte_size
-      FROM jira_snapshots js
-      JOIN teams t ON js.project_id = t.id
-      ORDER BY t.name, collected_week_start DESC
-    `;
+    const jiraSnapshots = await db
+      .select({
+        team: schema.teams.name,
+        collectedWeekStart: schema.jiraSnapshots.collectedWeekStart,
+        collectedWeekEnd: schema.jiraSnapshots.collectedWeekEnd,
+        byteSize: schema.jiraSnapshots.byteSize,
+      })
+      .from(schema.jiraSnapshots)
+      .innerJoin(schema.teams, sql`${schema.jiraSnapshots.projectId} = ${schema.teams.id}`)
+      .orderBy(schema.teams.name, sql`${schema.jiraSnapshots.collectedWeekStart} DESC`);
+    
     if (jiraSnapshots.length > 0) {
       console.table(jiraSnapshots);
     } else {
@@ -98,16 +116,17 @@ async function queryDatabase() {
     
     // Query Slack captures
     console.log('\nSlack Captures:');
-    const slackCaptures = await sql`
-      SELECT 
-        t.name as team,
-        collected_week_start,
-        collected_week_end,
-        byte_size
-      FROM slack_captures sc
-      JOIN teams t ON sc.project_id = t.id
-      ORDER BY t.name, collected_week_start DESC
-    `;
+    const slackCaptures = await db
+      .select({
+        team: schema.teams.name,
+        collectedWeekStart: schema.slackCaptures.collectedWeekStart,
+        collectedWeekEnd: schema.slackCaptures.collectedWeekEnd,
+        byteSize: schema.slackCaptures.byteSize,
+      })
+      .from(schema.slackCaptures)
+      .innerJoin(schema.teams, sql`${schema.slackCaptures.projectId} = ${schema.teams.id}`)
+      .orderBy(schema.teams.name, sql`${schema.slackCaptures.collectedWeekStart} DESC`);
+    
     if (slackCaptures.length > 0) {
       console.table(slackCaptures);
     } else {
@@ -131,5 +150,3 @@ if (require.main === module) {
 }
 
 module.exports = { queryDatabase };
-
-

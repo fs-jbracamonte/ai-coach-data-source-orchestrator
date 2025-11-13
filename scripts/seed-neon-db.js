@@ -1,13 +1,19 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const { neon } = require('@neondatabase/serverless');
+const { drizzle } = require('drizzle-orm/neon-http');
+const { eq } = require('drizzle-orm');
+const schema = require('../db/schema');
 
 /**
- * Neon Database Seeder
+ * Neon Database Seeder (Drizzle ORM)
  * 
  * Seeds organizations, teams, and report_types into Neon database.
- * - Idempotent (uses INSERT ... ON CONFLICT DO NOTHING)
+ * - Uses Drizzle ORM for type-safe inserts
+ * - Idempotent (uses onConflictDoNothing)
  * - Environment-aware (NEON_ENV determines which UUID cache file to use)
+ * - Automatically updates UUID cache file
  * - Portable across personal/organization Neon instances
  * 
  * Usage:
@@ -52,7 +58,7 @@ function mapTeamsToOrganizations(teams) {
   teams.forEach(team => {
     if (['rocks', 'timeclock'].includes(team)) {
       mapping['Full Scale'].push(team);
-    } else if (['engagepath', 'aicoach'].includes(team)) {
+    } else if (['engagepath', 'ai-coach', 'aicoach'].includes(team)) {
       mapping['Full Scale Ventures'].push(team);
     } else {
       console.warn(`⚠ Unknown team '${team}' - not mapped to any organization`);
@@ -63,117 +69,139 @@ function mapTeamsToOrganizations(teams) {
 }
 
 /**
- * Load UUID cache from file
- */
-function loadUUIDCache() {
-  if (fs.existsSync(UUID_CACHE_FILE)) {
-    try {
-      const content = fs.readFileSync(UUID_CACHE_FILE, 'utf8');
-      return JSON.parse(content);
-    } catch (err) {
-      console.warn(`⚠ Failed to load UUID cache: ${err.message}`);
-      return { organizations: {}, teams: {}, reportTypes: {} };
-    }
-  }
-  return { organizations: {}, teams: {}, reportTypes: {} };
-}
-
-/**
- * Save UUID cache to file
- */
-function saveUUIDCache(cache) {
-  try {
-    fs.writeFileSync(UUID_CACHE_FILE, JSON.stringify(cache, null, 2), 'utf8');
-    console.log(`\n✓ UUID cache saved to ${path.relative(process.cwd(), UUID_CACHE_FILE)}`);
-  } catch (err) {
-    console.error(`✗ Failed to save UUID cache: ${err.message}`);
-  }
-}
-
-/**
  * Main seeding function
  */
 async function seed() {
+  const databaseUrl = process.env.DATABASE_URL;
+  
+  if (!databaseUrl) {
+    console.error('✗ DATABASE_URL not configured in .env');
+    console.error('Add: DATABASE_URL=postgresql://user:pass@host/db?sslmode=require');
+    process.exit(1);
+  }
+  
   try {
-    // Check if Neon MCP is available
-    console.log('Checking Neon MCP availability...');
+    // Initialize Drizzle
+    const sql = neon(databaseUrl);
+    const db = drizzle(sql, { schema });
     
-    // Note: This script uses Neon MCP service which should be configured in Cursor
-    // The actual SQL execution will be done through the MCP service
-    
-    console.log('\n=== INSTRUCTIONS ===');
-    console.log('This seed script generates the SQL statements needed to populate your Neon database.');
-    console.log('Execute these SQL statements using the Neon MCP service or Neon console:\n');
+    console.log('Connected to database\n');
     
     // Discover teams
     const teams = discoverTeams();
     const orgMapping = mapTeamsToOrganizations(teams);
     
-    // Load existing UUID cache
-    const uuidCache = loadUUIDCache();
+    const uuidCache = {
+      projectId: databaseUrl.split('/').pop()?.split('?')[0] || 'neondb',
+      organizations: {},
+      teams: {},
+      reportTypes: {}
+    };
     
-    console.log('\n=== SQL STATEMENTS TO EXECUTE ===\n');
-    
-    // Generate organizations SQL
-    console.log('-- Insert organizations');
-    Object.keys(orgMapping).forEach(orgName => {
-      console.log(`INSERT INTO organizations (name, description) 
-VALUES ('${orgName}', '${orgName} organization')
-ON CONFLICT DO NOTHING
-RETURNING id, name;`);
-    });
-    
-    console.log('\n-- After running the above, note the UUIDs and insert teams:');
-    console.log('-- Replace <org-uuid> with actual UUID from organizations table\n');
-    
-    // Generate teams SQL
-    console.log('-- Insert teams');
-    Object.entries(orgMapping).forEach(([orgName, teamsList]) => {
-      teamsList.forEach(team => {
-        console.log(`INSERT INTO teams (client_id, name, description)
-VALUES ('<${orgName}-uuid>', '${team}', '${team} project')
-ON CONFLICT DO NOTHING
-RETURNING id, name;`);
-      });
-    });
-    
-    console.log('\n-- Insert report types');
-    const reportTypes = ['1on1', 'dashboard', 'weekly-digest'];
-    reportTypes.forEach(reportType => {
-      console.log(`INSERT INTO report_types (name, description)
-VALUES ('${reportType}', '${reportType} report type')
-ON CONFLICT (name) DO NOTHING
-RETURNING id, name;`);
-    });
-    
-    console.log('\n=== NEXT STEPS ===');
-    console.log('1. Copy the SQL statements above');
-    console.log('2. Execute them in your Neon database using:');
-    console.log('   - Neon MCP service: Use mcp_Neon_run_sql or mcp_Neon_run_sql_transaction');
-    console.log('   - Neon Console: SQL Editor at https://console.neon.tech');
-    console.log('3. After execution, update the UUID cache file manually:');
-    console.log(`   ${UUID_CACHE_FILE}`);
-    console.log('\nExample UUID cache structure:');
-    console.log(JSON.stringify({
-      organizations: {
-        'Full Scale': 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-        'Full Scale Ventures': 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-      },
-      teams: {
-        rocks: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-        timeclock: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-        engagepath: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-        aicoach: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-      },
-      reportTypes: {
-        '1on1': 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-        dashboard: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-        'weekly-digest': 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+    // Insert organizations
+    console.log('\nInserting organizations...');
+    for (const orgName of Object.keys(orgMapping)) {
+      const [org] = await db.insert(schema.organizations)
+        .values({
+          name: orgName,
+          description: `${orgName} organization`,
+        })
+        .onConflictDoNothing()
+        .returning();
+      
+      if (org) {
+        uuidCache.organizations[orgName] = org.id;
+        console.log(`  ✓ ${orgName}: ${org.id}`);
+      } else {
+        // Already exists, fetch it
+        const [existing] = await db.select()
+          .from(schema.organizations)
+          .where(eq(schema.organizations.name, orgName));
+        
+        if (existing) {
+          uuidCache.organizations[orgName] = existing.id;
+          console.log(`  ✓ ${orgName}: ${existing.id} (existing)`);
+        }
       }
-    }, null, 2));
+    }
     
-    console.log('\n✓ Seed SQL statements generated successfully');
+    // Insert teams
+    console.log('\nInserting teams...');
+    for (const [orgName, teamsList] of Object.entries(orgMapping)) {
+      const orgId = uuidCache.organizations[orgName];
+      
+      if (!orgId) {
+        console.error(`  ✗ Organization UUID not found for: ${orgName}`);
+        continue;
+      }
+      
+      for (const teamName of teamsList) {
+        const [team] = await db.insert(schema.teams)
+          .values({
+            clientId: orgId,
+            name: teamName,
+            description: `${teamName} project`,
+          })
+          .onConflictDoNothing()
+          .returning();
+        
+        if (team) {
+          uuidCache.teams[teamName] = team.id;
+          console.log(`  ✓ ${teamName}: ${team.id}`);
+        } else {
+          // Already exists, fetch it
+          const [existing] = await db.select()
+            .from(schema.teams)
+            .where(eq(schema.teams.name, teamName));
+          
+          if (existing) {
+            uuidCache.teams[teamName] = existing.id;
+            console.log(`  ✓ ${teamName}: ${existing.id} (existing)`);
+          }
+        }
+      }
+    }
+    
+    // Insert report types
+    console.log('\nInserting report types...');
+    const reportTypesList = ['1on1', 'dashboard', 'weekly-digest'];
+    
+    for (const reportTypeName of reportTypesList) {
+      const [reportType] = await db.insert(schema.reportTypes)
+        .values({
+          name: reportTypeName,
+          description: `${reportTypeName} report type`,
+        })
+        .onConflictDoNothing()
+        .returning();
+      
+      if (reportType) {
+        uuidCache.reportTypes[reportTypeName] = reportType.id;
+        console.log(`  ✓ ${reportTypeName}: ${reportType.id}`);
+      } else {
+        // Already exists, fetch it
+        const [existing] = await db.select()
+          .from(schema.reportTypes)
+          .where(eq(schema.reportTypes.name, reportTypeName));
+        
+        if (existing) {
+          uuidCache.reportTypes[reportTypeName] = existing.id;
+          console.log(`  ✓ ${reportTypeName}: ${existing.id} (existing)`);
+        }
+      }
+    }
+    
+    // Save UUID cache
+    console.log('\nSaving UUID cache...');
+    fs.writeFileSync(UUID_CACHE_FILE, JSON.stringify(uuidCache, null, 2), 'utf8');
+    console.log(`  ✓ UUID cache saved to: ${path.relative(process.cwd(), UUID_CACHE_FILE)}`);
+    
+    console.log('\n✓ Seeding completed successfully!');
     console.log(`Environment: ${NEON_ENV}`);
+    console.log(`\nUUID Cache Summary:`);
+    console.log(`  Organizations: ${Object.keys(uuidCache.organizations).length}`);
+    console.log(`  Teams: ${Object.keys(uuidCache.teams).length}`);
+    console.log(`  Report Types: ${Object.keys(uuidCache.reportTypes).length}`);
     
   } catch (error) {
     console.error('\n✗ Seeding failed:', error.message);
@@ -190,6 +218,3 @@ if (require.main === module) {
 }
 
 module.exports = { seed, discoverTeams, mapTeamsToOrganizations };
-
-
-

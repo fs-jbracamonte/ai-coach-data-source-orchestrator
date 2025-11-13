@@ -19,6 +19,9 @@ token.json
 # Neon Database UUID cache files (environment-specific)
 .neon-db-ids.*.json
 
+# Drizzle migrations (keep in version control, but ignore meta snapshots if needed)
+# drizzle/
+
 # SSH keys and certificates
 *.pem
 *.key

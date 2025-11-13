@@ -93,6 +93,15 @@
     "//": "════════════════════════════════════════════════════════════",
     "clean": "node scripts/clean.js",
     "list-reports": "node -e \"const fs=require('fs');const p='configs';let teams=[];if(fs.existsSync(p)){teams=fs.readdirSync(p,{withFileTypes:true}).filter(d=>d.isDirectory()&&d.name!=='shared').map(d=>d.name);}console.log('Available teams:',teams.join(', ')||'(none)');console.log('Report types: 1on1, team, weekly, dashboard');\"",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:migrate": "node scripts/run-neon-migrations.js",
+    "db:pull": "drizzle-kit pull",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "node scripts/seed-neon-db.js",
+    "db:query": "node scripts/query-neon-db.js",
+    "db:drop": "node scripts/drop-all-tables.js",
+    "neon:migrate": "node scripts/run-neon-migrations.js",
     "neon:seed": "node scripts/seed-neon-db.js",
     "neon:query": "node scripts/query-neon-db.js"
   },
@@ -105,6 +114,8 @@
     "csv-parser": "^3.2.0",
     "csv-writer": "^1.6.0",
     "dotenv": "^17.2.2",
+    "drizzle-orm": "^0.36.4",
+    "drizzle-seed": "^0.3.0",
     "googleapis": "^160.0.0",
     "joi": "^18.0.1",
     "mysql2": "^3.11.0",
@@ -116,6 +127,7 @@
     "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
-    "cross-env": "^10.0.0"
+    "cross-env": "^10.0.0",
+    "drizzle-kit": "^0.31.5"
   }
 }

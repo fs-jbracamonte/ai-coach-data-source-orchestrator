@@ -123,6 +123,79 @@ The merged configuration contains these sections:
 - Download and conversion settings
 - Optional date filtering for transcripts
 
+## Optional Integrations
+
+### Vercel Blob Storage
+
+Automatically upload generated markdown outputs to Vercel Blob Storage for backup and distribution.
+
+**Setup:**
+1. Create a Blob Store in your Vercel project dashboard (Storage tab)
+2. Copy `BLOB_READ_WRITE_TOKEN` from Vercel dashboard  
+3. Add to `.env`:
+   ```bash
+   ENABLE_VERCEL_BLOB_UPLOAD=true
+   BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxxxx
+   ```
+
+**What gets uploaded:**
+- Transcripts from `transcripts/markdown-output/{projectFolder}/`
+- Daily reports from `daily-reports/md-output/{projectFolder}/`
+- Slack data from `slack/md-output/{projectFolder}/sanitized/`
+- Jira data extracted from datasource.py files
+
+Uploads happen automatically after datasource generation. Local files are always preserved.
+
+### Neon PostgreSQL Database
+
+Store generated data sources in Neon PostgreSQL database with metadata and blob references.
+
+**Requirements:**
+- Vercel Blob upload must be enabled (stores blob references)
+- Neon PostgreSQL database with connection string
+
+**Setup:**
+1. Install dependencies:
+   ```bash
+   npm install  # Installs @neondatabase/serverless
+   ```
+
+2. Run database migrations (one-time):
+   ```bash
+   # Execute SQL from migrations/001_initial_schema.sql
+   # Execute SQL from migrations/002_updated_at_triggers.sql
+   # Use Neon Console SQL Editor or Neon MCP service
+   ```
+
+3. Seed organizations and teams:
+   ```bash
+   node scripts/seed-neon-db.js
+   # Execute the generated SQL in Neon Console
+   # Create UUID cache file with returned UUIDs
+   ```
+
+4. Enable in `.env`:
+   ```bash
+   ENABLE_VERCEL_BLOB_UPLOAD=true  # Required!
+   ENABLE_NEON_DB_STORAGE=true
+   DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
+   NEON_ENV=dev  # or staging, prod
+   ```
+
+**What gets stored:**
+- Daily reports (split by date, one row per employee per day)
+- Meeting transcripts (full text + blob references)
+- Jira snapshots (blob references with date ranges)
+- Slack captures (blob references with date ranges)
+
+Storage happens automatically after datasource generation using `@neondatabase/serverless`. Check console output for insertion success/failure counts.
+
+**Multi-Environment Support:**
+- Set `NEON_ENV` to different values (dev/staging/prod) for different Neon instances
+- UUID cache files are environment-specific: `.neon-db-ids.{NEON_ENV}.json`
+- Migrations are portable across all environments
+- Works in any Node.js environment: local development, Vercel, AWS Lambda, etc. (no Cursor/MCP dependency)
+
 ## Security Notes
 
 - **Never commit `.env` or `config.json`** to version control

@@ -16,6 +16,9 @@ service-account-key.json
 credentials.json
 token.json
 
+# Neon Database UUID cache files (environment-specific)
+.neon-db-ids.*.json
+
 # SSH keys and certificates
 *.pem
 *.key

@@ -97,11 +97,14 @@
     "datasource:team": "node datasource-generator/generate_team_datasource.js",
     "datasource:weekly-digest": "node datasource-generator/generate_weekly_digest.js",
     "datasource:dashboard": "node datasource-generator/generate_dashboard.js",
-    "datasource:all": "npm run datasource:generate"
+    "datasource:all": "npm run datasource:generate",
+    "neon:query": "node scripts/query-neon-db.js",
+    "neon:seed": "node scripts/seed-neon-db.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.3",
     "@secretlint/secretlint-rule-preset-recommend": "^11.2.5",
     "@vercel/blob": "^2.0.0",
     "csv-parser": "^3.2.0",

@@ -811,7 +811,11 @@ def get_employee_reports(employee_name):
 
       // Step 5: Extract Jira data and upload to Vercel Blob
       console.log('\n=== Step 5: Upload to Vercel Blob (if enabled) ===');
-      await this.uploadToVercelBlob(outputPath);
+      const vercelResults = await this.uploadToVercelBlob(outputPath);
+
+      // Step 6: Store to Neon Database (if enabled)
+      console.log('\n=== Step 6: Store to Neon Database (if enabled) ===');
+      await this.storeToNeonDB(outputPath, vercelResults);
 
       console.log('\n✓ Weekly digest generation completed successfully!');
     } catch (error) {
@@ -843,7 +847,7 @@ def get_employee_reports(employee_name):
       );
       
       // Upload all data
-      await uploadAllData({
+      const results = await uploadAllData({
         projectFolder,
         config,
         transcriptsDir: this.transcriptsDir,
@@ -851,9 +855,47 @@ def get_employee_reports(employee_name):
         slackDir: this.slackDir,
         jiraDataFile
       });
+      
+      return results;
     } catch (error) {
       console.warn('⚠ Vercel Blob upload failed (non-fatal):', error.message);
       console.warn('Continuing without upload...');
+      return null;
+    }
+  }
+
+  /**
+   * Store data to Neon Database
+   */
+  async storeToNeonDB(datasourcePath, vercelResults) {
+    try {
+      const { storeAllData } = require('../lib/neon-db-storage');
+      const { getProjectFolder } = require('../lib/project-folder');
+      const { extractAndSave } = require('../lib/jira-data-extractor');
+      
+      const projectFolder = getProjectFolder(process.env.TEAM, config);
+      
+      // Extract Jira data file path (should already be extracted from uploadToVercelBlob)
+      const jiraDataFile = extractAndSave(
+        datasourcePath,
+        this.jiraDir,
+        config,
+        'weekly'
+      );
+      
+      // Store all data
+      await storeAllData({
+        projectFolder,
+        config,
+        transcriptsDir: this.transcriptsDir,
+        dailyReportsDir: this.dailyReportsDir,
+        slackDir: this.slackDir,
+        jiraDataFile,
+        vercelResults
+      });
+    } catch (error) {
+      console.warn('⚠ Neon DB storage failed (non-fatal):', error.message);
+      console.warn('Continuing without database storage...');
     }
   }
 }
